@@ -12,7 +12,11 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false,
+      "all": true,
+      "dialog": {
+        "open": true,
+        "save": true
+      },
       "shell": {
         "all": false,
         "open": true
@@ -33,7 +37,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "tuip123-comic",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
