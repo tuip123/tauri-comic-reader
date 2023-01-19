@@ -17,7 +17,9 @@ async function addLibrary() {
     directory: true
   }) as string[];
   for (let string of selected) {
-    await invoke("add_library", {path: string})
+    let b = await invoke("add_library", {path: string})
+    if (!b) console.log('已经添加过了')
+    else console.log('添加成功')
   }
 }
 
