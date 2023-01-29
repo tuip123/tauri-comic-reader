@@ -39,7 +39,7 @@ fn init_db() {
         b = true;
     }
     if !b {
-        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,cover TEXT,count INTEGER,libraryId INTEGER)";
+        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,title TEXT,cover TEXT,count INTEGER,libraryId INTEGER)";
         conn.execute(query).unwrap();
     }
 
@@ -52,45 +52,93 @@ fn init_db() {
         b = true;
     }
     if !b {
-        query = "CREATE TABLE library (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,root TEXT)";
+        query = "CREATE TABLE library (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,root TEXT,count INTEGER)";
         conn.execute(query).unwrap();
     }
 }
+
 use std::fs;
+
 #[tauri::command]
 fn add_library(path: &str) -> bool {
     let conn = get_conn();
     // 查找有无记录
     let mut insert = conn.prepare("select Id from library where root = ? limit 1").unwrap();
-    insert.bind(1,path).unwrap();
-    let mut bool = true;
-    while let State::Row = insert.next().unwrap(){
-        bool = false;
-        return bool;
+    insert.bind(1, path).unwrap();
+    while let State::Row = insert.next().unwrap() {
+        return false;
     }
     // 添加库记录
     insert = conn.prepare("insert into library (root) values (?)").unwrap();
-    insert.bind(1,path).unwrap();
+    insert.bind(1, path).unwrap();
     insert.next().unwrap();
     insert = conn.prepare("select Id from library where root = ? limit 1").unwrap();
-    insert.bind(1,path).unwrap();
+    insert.bind(1, path).unwrap();
     let mut library_id = 0;
-    while let State::Row = insert.next().unwrap(){
+    while let State::Row = insert.next().unwrap() {
         library_id = insert.read::<i64>(0).unwrap();
     }
     // 添加库下漫画记录
-    // todo 修改为使用 fn 刷新漫画列表
-    let paths = fs::read_dir(path).unwrap();
+    reload_library(library_id);
+    return true;
+}
+
+#[tauri::command]
+fn reload_library(library_id: i64) -> bool {
+    let conn = get_conn();
+
+    let mut delete = conn.prepare("delete from comic where libraryId = ?").unwrap();
+    delete.bind(1, library_id).unwrap();
+    delete.next().unwrap();
+
+    let mut select = conn.prepare("select root from library where Id = ?").unwrap();
+    select.bind(1, library_id).unwrap();
+    let mut root = String::from("");
+    while let State::Row = select.next().unwrap() {
+        root = select.read::<String>(0).unwrap();
+    }
+    if root == "" {
+        println!("库id不存在");
+    }
+    let paths = fs::read_dir(root).unwrap();
+    let mut count = 0;
     for path in paths {
-        insert = conn.prepare("insert into comic (path,libraryId) values (?,?)").unwrap();
-        insert.bind(1,path.unwrap().path().to_str()).unwrap();
-        insert.bind(2, library_id).unwrap();
+        count += 1;
+        let mut insert = conn.prepare("insert into comic (libraryId,title,path,count) values (?,?,?,?)").unwrap();
+        let comic_path = path.unwrap().path();
+        let comic_path_clone = comic_path.clone();
+        let comic_path_clone2 = comic_path.clone();
+
+        let title = comic_path_clone.file_name().unwrap().to_str().unwrap();
+
+        let comic_path_str = comic_path.to_str().unwrap();
+
+        let comic_dir = fs::read_dir(comic_path_clone2).unwrap();
+        let mut comic_count = 0;
+        for file in comic_dir {
+            let temp = file.unwrap().file_name();
+            let file_name: Vec<&str> = temp.to_str().unwrap().split(".").collect();
+            if file_name[file_name.len()-1] == "jpg"
+            {
+                comic_count+=1;
+            }
+        }
+
+        insert.bind(1, library_id).unwrap();
+        insert.bind(2, title).unwrap();
+        insert.bind(3, comic_path_str).unwrap();
+        insert.bind(4,comic_count).unwrap();
         insert.next().unwrap();
     }
-    return bool;
+
+    let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
+    update.bind(1, count).unwrap();
+    update.bind(2, library_id).unwrap();
+    update.next().unwrap();
+
+    false
 }
-// todo （根据库id）刷新漫画列表（重新检索path，和数据库中比对，仅path的为新增，仅数据库的为删除，移除删除记录，添加新增记录）
-// todo 基于上述，添加count计算页数，添加cover获取封面
+// todo 添加cover获取封面
 // 思路 两个map，第一个为path结果 第二个为数据库结果
 // map1遍历，map2中查，有结果，两边删除 此时剩余的map1为新增，map2为删除
 // 对数据库里map2删除map1新增
@@ -101,7 +149,7 @@ fn add_library(path: &str) -> bool {
 fn main() {
     init_db();
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet,add_library])
+        .invoke_handler(tauri::generate_handler![greet,add_library,reload_library])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
