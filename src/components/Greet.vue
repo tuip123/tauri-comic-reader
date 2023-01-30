@@ -36,6 +36,16 @@ async function addThirdPartyImageViewer() {
   await invoke("add_third_party_image_viewer", {path: selected})
 }
 
+async function openWithThirdParty(){
+  await invoke('open_with_third_party',{folder:""})
+}
+
+async function queryLibrary(){
+  let res = await invoke('query_library',{search:"",page:1,pageSize:10})
+  console.log(res)
+}
+
+
 </script>
 
 <template>
@@ -47,5 +57,9 @@ async function addThirdPartyImageViewer() {
     <button type="button" @click="reloadLibrary()">reloadLibrary</button>
     <br>
     <button type="button" @click="addThirdPartyImageViewer()">addThirdPartyImageViewer</button>
+    <br>
+    <button type="button" @click="openWithThirdParty()">openWithThirdParty</button>
+    <br>
+    <button type="button" @click="queryLibrary()">queryLibrary</button>
   </div>
 </template>
