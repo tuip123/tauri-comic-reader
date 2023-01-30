@@ -2,6 +2,7 @@
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
 import {ref} from 'vue'
+
 async function addLibrary() {
   const selected = await open({
     multiple: true,
@@ -15,9 +16,24 @@ async function addLibrary() {
 }
 
 const temp = ref(1)
-async function reloadLibrary(){
-  let b = await invoke("reload_library",{libraryId:Number(temp.value)})
-  console.log(b)
+
+async function reloadLibrary() {
+  await invoke("reload_library", {libraryId: Number(temp.value)})
+}
+
+async function addThirdPartyImageViewer() {
+  const selected = await open({
+    multiple: false,
+    directory: false,
+    filters: [{
+      name: '可执行程序',
+      extensions: ['exe']
+    },{
+      name: '所有文件',
+      extensions: ['*']
+    }]
+  }) as string;
+  await invoke("add_third_party_image_viewer", {path: selected})
 }
 
 </script>
@@ -25,7 +41,11 @@ async function reloadLibrary(){
 <template>
   <div class="card">
     <input v-model="temp">
+    <br>
     <button type="button" @click="addLibrary()">addLibrary</button>
+    <br>
     <button type="button" @click="reloadLibrary()">reloadLibrary</button>
+    <br>
+    <button type="button" @click="addThirdPartyImageViewer()">addThirdPartyImageViewer</button>
   </div>
 </template>
