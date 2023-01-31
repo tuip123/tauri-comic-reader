@@ -8,6 +8,7 @@ use sqlite::{Connection, State, Statement};
 use std::fs::create_dir_all;
 use std::path::Path;
 use tauri::api::path::app_data_dir;
+use tauri::api::path::app_local_data_dir;
 use std::fs;
 use serde_with::serde_as;
 
@@ -65,8 +66,8 @@ pub struct ComicRead {
 
 // 初始化相关
 fn get_conn() -> Result<Connection, String> {
-    let dir = app_data_dir(&Default::default()).unwrap();
-    let full_dir = dir.to_str().unwrap().to_owned() + "tuip123-comic\\";
+    let dir = app_local_data_dir(&Default::default()).unwrap().join("tuip123-comic\\");
+    let full_dir = dir.to_str().unwrap().to_owned();
     let p = Path::new(&full_dir);
     match create_dir_all(p) {
         Ok(_f) => {}
@@ -118,7 +119,7 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','alpha');\
+        insert into config (key,value) values ('version','0.0.1');\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
