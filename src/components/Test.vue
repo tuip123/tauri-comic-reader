@@ -3,33 +3,34 @@ import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
 import {ref} from 'vue'
 
-interface Pagination{
-  current:number,
-  size:number,
-  total:number,
-}
-interface Comic{
-  id:number,
-  count:number,
-  library_id:number,
-  cover:string,
-  path:string,
-  title:string,
+interface Pagination {
+  current: number,
+  size: number,
+  total: number,
 }
 
-interface ComicList{
-  list:Comic[],
-  pagination:Pagination
+interface Comic {
+  id: number,
+  count: number,
+  library_id: number,
+  cover: string,
+  path: string,
+  title: string,
 }
 
-interface Library{
-  id:number,
-  root:string,
+interface ComicList {
+  list: Comic[],
+  pagination: Pagination
 }
 
-interface LibraryList{
-  list:Library[],
-  pagination:Pagination
+interface Library {
+  id: number,
+  root: string,
+}
+
+interface LibraryList {
+  list: Library[],
+  pagination: Pagination
 }
 
 async function addLibrary() {
@@ -38,16 +39,23 @@ async function addLibrary() {
     directory: true
   }) as string[];
   for (let string of selected) {
-    let b = await invoke("add_library", {path: string})
-    if (!b) console.log('已经添加过了')
-    else console.log('添加成功')
+    try {
+      await invoke("add_library", {path: string})
+      console.log('添加成功')
+    } catch (e) {
+      console.log(e)
+    }
   }
 }
 
 const temp = ref(1)
 
 async function reloadLibrary() {
-  await invoke("reload_library", {libraryId: Number(temp.value)})
+  try {
+    await invoke("reload_library", {libraryId: Number(temp.value)})
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 async function addThirdPartyImageViewer() {
@@ -57,29 +65,45 @@ async function addThirdPartyImageViewer() {
     filters: [{
       name: '可执行程序',
       extensions: ['exe']
-    },{
+    }, {
       name: '所有文件',
       extensions: ['*']
     }]
   }) as string;
-  await invoke("update_config", {key:'third_party_image_viewer',value: selected})
+  await invoke("update_config", {key: 'third_party_image_viewer', value: selected})
 }
 
-async function openWithThirdParty(){
-  await invoke('open_with_third_party',{folder:""})
+async function openWithThirdParty() {
+  try {
+    await invoke('open_with_third_party', {folder: "D:\\56"})
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 
-async function queryLibrary(){
-  let res = await invoke('query_library',{search:"",page:1,pageSize:10}) as LibraryList
+async function queryLibrary() {
+  let res = await invoke('query_library', {search: "", page: Number(temp.value), pageSize: 10}) as LibraryList
   console.log(res)
 }
-async function queryComic(){
-  let res = await invoke('query_comic',{search:"",libraryId:1,page:1,pageSize:10}) as ComicList
+
+async function queryComic() {
+  let res = await invoke('query_comic', {search: "", libraryId: Number(temp.value), page: 1, pageSize: 10}) as ComicList
   console.log(res)
 }
 
+async function deleteComic() {
+  await invoke('delete_comic', {id: Number(temp.value)})
+}
 
+async function readComic() {
+  try {
+    let res = await invoke('read_comic', {id: Number(temp.value)})
+    console.log(res)
+  } catch (e) {
+    console.error(e)
+  }
+}
 
 </script>
 
@@ -98,5 +122,9 @@ async function queryComic(){
     <button type="button" @click="queryLibrary()">queryLibrary</button>
     <br>
     <button type="button" @click="queryComic()">queryComic</button>
+    <br>
+    <button type="button" @click="deleteComic()">deleteComic</button>
+    <br>
+    <button type="button" @click="readComic()">readComic</button>
   </div>
 </template>
