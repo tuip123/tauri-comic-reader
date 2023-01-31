@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
+import {invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
 import {ref} from 'vue'
 
@@ -104,7 +104,17 @@ async function readComic() {
     console.error(e)
   }
 }
+import {useRouter} from "vue-router";
+const router = useRouter()
 
+function routerFn(){
+  router.push({
+    path:'/ComicBookcase',
+    query:{
+      id:temp.value
+    }
+  })
+}
 </script>
 
 <template>
@@ -126,5 +136,8 @@ async function readComic() {
     <button type="button" @click="deleteComic()">deleteComic</button>
     <br>
     <button type="button" @click="readComic()">readComic</button>
+    <br>
+    <button type="button" @click="routerFn()">router</button>
+
   </div>
 </template>

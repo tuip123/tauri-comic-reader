@@ -7,7 +7,6 @@ use std::process::Command;
 use sqlite::{Connection, State, Statement};
 use std::fs::create_dir_all;
 use std::path::Path;
-use tauri::api::path::app_data_dir;
 use tauri::api::path::app_local_data_dir;
 use std::fs;
 use serde_with::serde_as;
