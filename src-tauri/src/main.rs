@@ -55,7 +55,7 @@ pub struct ComicList {
     pub list: Vec<Comic>,
     pub pagination: Pagination,
 }
-
+// 初始化相关
 fn get_conn() -> Result<Connection, String> {
     let dir = app_data_dir(&Default::default()).unwrap();
     let full_dir = dir.to_str().unwrap().to_owned() + "tuip123-comic\\";
@@ -108,11 +108,17 @@ fn init_db() {
         b = true;
     }
     if !b {
-        query = "CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT)";
+        query = "\
+        CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
+        insert into config (key,value) values ('third_party_image_viewer','null');\
+        insert into config (key,value) values ('third_party_open','false');\
+        insert into config (key,value) values ('delete_source_file','false');\
+        ";
         conn.execute(query).unwrap();
     }
 }
 
+// 库相关
 #[tauri::command]
 fn add_library(path: &str) -> Result<(), String> {
     let conn = get_conn().unwrap();
@@ -209,70 +215,90 @@ fn reload_library(library_id: i64) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
-    let conn = get_conn().unwrap();
-    let mut insert = conn.prepare("select count(1) from config where key = 'third_party_image_viewer'").unwrap();
-    let mut update_type = false;
-    while let State::Row = insert.next().unwrap() {
-        if insert.read::<i64>(0).unwrap() == 1 {
-            update_type = true;
-        }
-    }
-    if update_type == true {
-        let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
-        update.bind(1, path).unwrap();
-        update.next().unwrap();
-    } else {
-        insert = conn.prepare("insert into config (key,value) values ('third_party_image_viewer',?)").unwrap();
-        insert.bind(1, path).unwrap();
-        insert.next().unwrap();
-    }
-    Ok(())
-}
-
+// 查询相关
 #[tauri::command]
 fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList, String> {
     let conn = get_conn().unwrap();
-    let offset = (page-1) * page_size;
-    let mut select:Statement;
-    let mut return_list:LibraryList=LibraryList{
-        list:vec![],
-        pagination:Pagination{current:page as i32,size:page_size as i32,total:0}
+    let offset = (page - 1) * page_size;
+    let mut select: Statement;
+    let mut return_list: LibraryList = LibraryList {
+        list: vec![],
+        pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
     };
     select = conn.prepare("select count(1) from library").unwrap();
     while let State::Row = select.next().unwrap() {
         return_list.pagination.total = select.read::<i64>(0).unwrap() as i32;
     }
-    if search.trim().len()==0 {
+    if search.trim().len() == 0 {
         select = conn.prepare("select Id,root,count from library LIMIT ? OFFSET ?").unwrap();
-        select.bind(1,page_size).unwrap();
-        select.bind(2,offset).unwrap();
-    }
-    else {
+        select.bind(1, page_size).unwrap();
+        select.bind(2, offset).unwrap();
+    } else {
         select = conn.prepare("select Id,root,count from library where root LIKE ? LIMIT ? OFFSET ?").unwrap();
-        select.bind(1,&*String::from(format!("%{}%", search.trim()))).unwrap();
-        select.bind(2,page_size).unwrap();
-        select.bind(3,offset).unwrap();
+        select.bind(1, &*String::from(format!("%{}%", search.trim()))).unwrap();
+        select.bind(2, page_size).unwrap();
+        select.bind(3, offset).unwrap();
     }
     while let State::Row = select.next().unwrap() {
-        let mut library:Library = Library{
+        let library: Library = Library {
             id: select.read::<i64>(0).unwrap(),
-            root: select.read::<String>(1).unwrap() };
+            root: select.read::<String>(1).unwrap(),
+        };
         return_list.list.push(library);
     }
     Ok(return_list)
 }
 
 #[tauri::command]
-fn query_comic(){
-
+fn query_comic(search: &str,library_id:i64, page: i64, page_size: i64)->Result<ComicList,String> {
+    let conn = get_conn().unwrap();
+    let offset = (page - 1) * page_size;
+    let mut select: Statement;
+    let mut return_list:ComicList=ComicList{
+        list:vec![],
+        pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
+    };
+    select = conn.prepare("select count(1) from library").unwrap();
+    while let State::Row = select.next().unwrap() {
+        return_list.pagination.total = select.read::<i64>(0).unwrap() as i32;
+    }
+    if search.trim().len() == 0 {
+        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? LIMIT ? OFFSET ?").unwrap();
+        select.bind(1, library_id).unwrap();
+        select.bind(2, page_size).unwrap();
+        select.bind(3, offset).unwrap();
+    }
+    else {
+        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? root LIKE ? LIMIT ? OFFSET ?").unwrap();
+        select.bind(1, library_id).unwrap();
+        select.bind(2, &*String::from(format!("%{}%", search.trim()))).unwrap();
+        select.bind(3, page_size).unwrap();
+        select.bind(4, offset).unwrap();
+    }
+    while let State::Row = select.next().unwrap() {
+        let comic: Comic = Comic {
+            id: select.read::<i64>(0).unwrap(),
+            path: select.read::<String>(1).unwrap(),
+            title: select.read::<String>(2).unwrap(),
+            cover: select.read::<String>(3).unwrap(),
+            count: select.read::<i64>(4).unwrap(),
+            library_id: library_id,
+        };
+        return_list.list.push(comic);
+    }
+    Ok(return_list)
 }
 
-// todo 根据libraryid获取所有comic
-// todo 分页查询，搜索查询
-// todo 配置，是否删除文件
-// todo 删除库 删除comic
+// 配置相关
+#[tauri::command]
+fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
+    let conn = get_conn().unwrap();
+    let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
+    update.bind(1, path).unwrap();
+    update.next().unwrap();
+    Ok(())
+}
+
 #[tauri::command]
 fn open_with_third_party(folder: &str) {
     let conn = get_conn().unwrap();
@@ -286,12 +312,27 @@ fn open_with_third_party(folder: &str) {
     Command::new("cmd").arg("/c").arg(cmd_str).output().expect("cmd exec error!");
 }
 
+#[tauri::command]
+fn update_config(key: &str, value: &str) -> Result<(), String> {
+    let conn = get_conn().unwrap();
+    let mut update = conn.prepare("update config set value = ? where key = ?").unwrap();
+    update.bind(1, value).unwrap();
+    update.bind(2, key).unwrap();
+    update.next().unwrap();
+    Ok(())
+}
+// todo 根据libraryid获取所有comic
+// todo 分页查询，搜索查询
+// todo 删除库 删除comic
+// todo 删除本地文件
+
 fn main() {
     init_db();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             add_library,
             reload_library,
+            update_config,
             add_third_party_image_viewer,
             open_with_third_party,
             query_library,

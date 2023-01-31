@@ -1,7 +1,36 @@
 <script setup lang="ts">
-import {invoke} from "@tauri-apps/api/tauri";
+import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
 import {ref} from 'vue'
+
+interface Pagination{
+  current:number,
+  size:number,
+  total:number,
+}
+interface Comic{
+  id:number,
+  count:number,
+  library_id:number,
+  cover:string,
+  path:string,
+  title:string,
+}
+
+interface ComicList{
+  list:Comic[],
+  pagination:Pagination
+}
+
+interface Library{
+  id:number,
+  root:string,
+}
+
+interface LibraryList{
+  list:Library[],
+  pagination:Pagination
+}
 
 async function addLibrary() {
   const selected = await open({
@@ -33,17 +62,23 @@ async function addThirdPartyImageViewer() {
       extensions: ['*']
     }]
   }) as string;
-  await invoke("add_third_party_image_viewer", {path: selected})
+  await invoke("update_config", {key:'third_party_image_viewer',value: selected})
 }
 
 async function openWithThirdParty(){
   await invoke('open_with_third_party',{folder:""})
 }
 
+
 async function queryLibrary(){
-  let res = await invoke('query_library',{search:"",page:1,pageSize:10})
+  let res = await invoke('query_library',{search:"",page:1,pageSize:10}) as LibraryList
   console.log(res)
 }
+async function queryComic(){
+  let res = await invoke('query_comic',{search:"",libraryId:1,page:1,pageSize:10}) as ComicList
+  console.log(res)
+}
+
 
 
 </script>
@@ -61,5 +96,7 @@ async function queryLibrary(){
     <button type="button" @click="openWithThirdParty()">openWithThirdParty</button>
     <br>
     <button type="button" @click="queryLibrary()">queryLibrary</button>
+    <br>
+    <button type="button" @click="queryComic()">queryComic</button>
   </div>
 </template>
