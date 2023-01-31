@@ -13,6 +13,11 @@
   "tauri": {
     "allowlist": {
       "all": true,
+      "protocol": {
+        "asset": true,
+        "all": true,
+        "assetScope": ["**"]
+      },
       "dialog": {
         "open": true,
         "save": true
