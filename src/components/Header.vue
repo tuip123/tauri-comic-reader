@@ -11,7 +11,6 @@
             </template>
           </n-button>
         </n-space>
-
       </div>
     </div>
     <div v-if="props.noSearch===undefined">
@@ -43,7 +42,6 @@
       </div>
     </div>
   </n-space>
-
 </template>
 
 <script setup lang="ts">
@@ -57,7 +55,6 @@ const route = useRoute()
 const path = route.path
 const searchWord = ref("")
 const props = defineProps(['noSearch','noBack','noConfig'])
-console.log(props)
 const emit = defineEmits(['query'])
 
 function query() {

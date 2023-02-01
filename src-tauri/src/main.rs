@@ -418,6 +418,7 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
 }
 
 // todo 更新，根据配置表的版本号
+// todo 查询设置信息
 fn main() {
     init_db();
     tauri::Builder::default()

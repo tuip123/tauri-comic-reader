@@ -1,4 +1,3 @@
-<!--todo 添加库 删除库-->
 <template>
   <Test v-show="false"/>
   <n-layout vertical size="large">
@@ -8,15 +7,27 @@
     <n-layout-content :native-scrollbar="false" style="height: calc(100vh - 128px)">
       <n-list style="margin-top:12px " bordered hoverable clickable show-divider>
         <template #header>
-          <n-space justify="center" size="large">
-            <n-icon size="24">
-              <Library/>
-            </n-icon>
-            漫画库：
+          <n-space justify="space-between" size="large">
+            <div style="height: 24px; line-height: 24px;font-size: 20px;display: flex">
+              <div style="width: 24px">
+                <n-icon size="24">
+                  <Library/>
+                </n-icon>
+              </div>
+              <div style="width: 128px">
+                漫画库：
+              </div>
+            </div>
+            <div>
+              <n-button size="tiny" type="primary" circle @click="addLibrary">
+                <template #icon>
+                  <n-icon>
+                    <add/>
+                  </n-icon>
+                </template>
+              </n-button>
+            </div>
           </n-space>
-        </template>
-        <template #footer>
-          添加/编辑
         </template>
         <n-list-item v-for="library in libraryList" :key="library.id" @click="toBookcase(library.id)">
           {{ library.root }}
@@ -26,9 +37,14 @@
             </n-icon>
           </template>
           <template #suffix>
-            <n-icon>
-              <chevron-forward/>
-            </n-icon>
+            <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id)">
+              <template #icon>
+                <n-icon>
+                  <trash-bin/>
+                </n-icon>
+              </template>
+              移除
+            </n-button>
           </template>
         </n-list-item>
       </n-list>
@@ -50,7 +66,6 @@
     </n-layout-footer>
   </n-layout>
 </template>
-
 <script setup lang="ts">
 import Test from "@/components/Test.vue";
 import Header from "@/components/Header.vue";
@@ -65,12 +80,16 @@ import {
   NSpace,
   NList,
   NListItem,
-  NIcon
+  NIcon,
+  NButton,
+  useMessage
 } from "naive-ui"
-import {Library, LibraryOutline, ChevronForward} from "@vicons/ionicons5";
+import {Library, LibraryOutline, Add, TrashBin} from "@vicons/ionicons5";
 import {useRouter} from "vue-router";
+import {open} from "@tauri-apps/api/dialog";
 
 const router = useRouter()
+const message = useMessage()
 
 interface Pagination {
   current: number,
@@ -123,6 +142,27 @@ async function sizeChange(num: number) {
 
 function toBookcase(libraryId: number) {
   router.push({path: '/ComicBookcase', query: {libraryId: libraryId}})
+}
+
+async function removeLibrary(libraryId: number) {
+  await invoke('delete_library', {id: libraryId})
+  await queryLibrary()
+}
+
+async function addLibrary(){
+  const selected = await open({
+    multiple: true,
+    directory: true
+  }) as string[];
+  for (let string of selected) {
+    try {
+      await invoke("add_library", {path: string})
+      message.success('添加成功')
+      await queryLibrary()
+    } catch (err) {
+      message.error(err as string)
+    }
+  }
 }
 
 onMounted(() => {

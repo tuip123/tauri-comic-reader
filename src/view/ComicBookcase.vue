@@ -23,7 +23,7 @@
     </n-layout-footer>
   </n-layout>
 </template>
-
+<!--todo 展示、搜索、删除漫画-->
 <script setup lang="ts">
 import { NLayout, NLayoutHeader,NLayoutContent,NLayoutFooter,NSpace,NPagination} from "naive-ui"
 import Header from "@/components/Header.vue";
@@ -46,7 +46,7 @@ const libraryId = route.query.libraryId
 console.log(libraryId)
 
 async function queryComic(){
-  
+
 }
 
 async function pageChange(num: number) {

@@ -5,7 +5,7 @@
     </n-layout-header>
   </n-layout>
 </template>
-
+<!--todo 展示，修改config-->
 <script setup lang="ts">
 import { NLayout, NLayoutHeader} from "naive-ui"
 import Header from "@/components/Header.vue";
