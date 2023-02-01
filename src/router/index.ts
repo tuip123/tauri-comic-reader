@@ -1,25 +1,24 @@
-
 import { createRouter, createWebHistory } from "vue-router";
-import home from "@/view/Home.vue";
-import comicBookcase from "@/view/ComicBookcase.vue";
-import comicReader from "@/view/ComicReader.vue";
-import config from "@/view/Config.vue";
 const routes:any = [
     {
         path: '/',
-        component: home
+        redirect:'/home'
+    },
+    {
+        path: '/home',
+        component: ()=>import('@/view/Home.vue')
     },
     {
         path: '/ComicBookcase',
-        component: comicBookcase
+        component: ()=>import('@/view/ComicBookcase.vue')
     },
     {
         path: '/ComicReader',
-        component: comicReader
+        component: ()=>import('@/view/ComicReader.vue')
     },
     {
         path: '/Config',
-        component: config
+        component: ()=>import('@/view/Config.vue')
     },
 ]
 
