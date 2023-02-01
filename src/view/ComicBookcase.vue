@@ -1,10 +1,14 @@
 <template>
   <n-layout vertical size="large">
     <n-layout-header style="height: 64px;padding: 12px">
-      <Header/>
+      <Header @query="setSearchWord"/>
     </n-layout-header>
     <n-layout-content>
-      {{libraryId}}
+      <n-grid cols="2 s:3 m:4 l:5 xl:6 2xl:7" responsive="screen">
+        <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
+          <ComicItem :comic="comic"/>
+        </n-grid-item>
+      </n-grid>
     </n-layout-content>
     <n-layout-footer
         style="height: 64px;padding: 24px">
@@ -13,7 +17,7 @@
             v-model:page="pagination.current"
             v-model:page-size="pagination.size"
             :item-count="pagination.total"
-            :page-sizes="[10, 20]"
+            :page-sizes="[9, 18, 27]"
             :page-slot="5"
             show-size-picker
             :on-update:page="pageChange"
@@ -23,30 +27,62 @@
     </n-layout-footer>
   </n-layout>
 </template>
-<!--todo 展示、搜索、删除漫画-->
+<!--todo 展示、删除漫画-->
 <script setup lang="ts">
-import { NLayout, NLayoutHeader,NLayoutContent,NLayoutFooter,NSpace,NPagination} from "naive-ui"
+import {NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NSpace, NPagination,NGrid,NGridItem} from "naive-ui"
 import Header from "@/components/Header.vue";
-import {useRoute,useRouter} from "vue-router";
-import {ref} from "vue";
+import ComicItem from "@/components/ComicItem.vue";
+import {useRoute, useRouter} from "vue-router";
+import {ref, onMounted} from "vue";
+import {invoke} from "@tauri-apps/api/tauri";
+
 interface Pagination {
   current: number,
   size: number,
   total: number,
 }
+
+interface Comic {
+  id: number,
+  count: number,
+  library_id: number,
+  cover: string,
+  path: string,
+  title: string,
+}
+
+interface ComicList {
+  list: Comic[],
+  pagination: Pagination
+}
+
 const pagination = ref<Pagination>({
   current: 1,
-  size: 10,
+  size: 9,
   total: 1
 })
+const comicList = ref<Comic[]>([])
+
 const router = useRouter()
 const route = useRoute()
 const libraryId = route.query.libraryId
 
-console.log(libraryId)
+const searchWord = ref("")
 
-async function queryComic(){
+function setSearchWord(word: string) {
+  searchWord.value = word
+  queryComic()
+}
 
+async function queryComic() {
+  let res = await invoke('query_comic', {
+    search: searchWord.value,
+    page: pagination.value.current,
+    pageSize: pagination.value.size,
+    libraryId: Number(libraryId)
+  }) as ComicList
+  pagination.value = res.pagination
+  comicList.value = res.list
 }
 
 async function pageChange(num: number) {
@@ -59,6 +95,9 @@ async function sizeChange(num: number) {
   await queryComic()
 }
 
+onMounted(async () => {
+  await queryComic()
+})
 </script>
 
 <style scoped>
