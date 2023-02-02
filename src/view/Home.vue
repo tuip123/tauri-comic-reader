@@ -40,25 +40,25 @@
               </div>
             </template>
             <template #suffix>
-              <div style="display: flex">
-                <n-space justify="center">
-                  <n-button tertiary round type="error" size="small" @click.stop="reloadLibrary(library.id)">
+              <div style="display: flex" >
+                <n-space justify="center" style="padding-right: 8px; ">
+                  <n-button tertiary round type="primary" size="small" @click.stop="reloadLibrary(library.id)">
                     <template #icon>
                       <n-icon>
-                        <trash-bin/>
+                        <reload-sharp/>
                       </n-icon>
                     </template>
-                    TODO 刷新
+                    刷新
                   </n-button>
                 </n-space>
                 <n-space justify="center">
                   <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id)">
+                    移除
                     <template #icon>
                       <n-icon>
-                        <trash-bin/>
+                        <remove-sharp/>
                       </n-icon>
                     </template>
-                    移除
                   </n-button>
                 </n-space>
               </div>
@@ -84,7 +84,6 @@
     </n-layout-footer>
   </n-layout>
 </template>
-<!--todo 刷新库-->
 <script setup lang="ts">
 import Test from "@/components/Test.vue";
 import Header from "@/components/Header.vue";
@@ -104,7 +103,7 @@ import {
   NScrollbar,
   useMessage
 } from "naive-ui"
-import {Library, LibraryOutline, Add, TrashBin} from "@vicons/ionicons5";
+import {Library, LibraryOutline, Add, RemoveSharp, ReloadSharp} from "@vicons/ionicons5";
 import {useRouter} from "vue-router";
 import {open} from "@tauri-apps/api/dialog";
 
@@ -184,6 +183,7 @@ async function addLibrary() {
     }
   }
 }
+
 async function reloadLibrary(libraryId: number) {
   console.log('123')
   await invoke("reload_library", {libraryId: libraryId})
