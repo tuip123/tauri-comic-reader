@@ -4,7 +4,7 @@
       <Header @query="setSearchWord"/>
     </n-layout-header>
     <n-layout-content style="height: calc(100vh - 128px)">
-      <n-scrollbar>
+      <n-scrollbar ref="scrollbar">
         <n-grid cols="2 s:3 m:4 l:6 xl:8 2xl:10" responsive="screen">
           <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
             <ComicItem :comic="comic"/>
@@ -74,7 +74,7 @@ const pagination = ref<Pagination>({
   total: 1
 })
 const comicList = ref<Comic[]>([])
-
+const scrollbar = ref()
 const router = useRouter()
 const route = useRoute()
 const libraryId = route.query.libraryId
@@ -95,6 +95,7 @@ async function queryComic() {
   }) as ComicList
   pagination.value = res.pagination
   comicList.value = res.list
+  scrollbar.value.scrollTo({top:0})
 }
 
 async function pageChange(num: number) {
