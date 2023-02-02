@@ -4,8 +4,9 @@ windows_subsystem = "windows"
 )]
 
 use std::process::Command;
+use std::fs::metadata;
 use sqlite::{Connection, State, Statement};
-use std::fs::create_dir_all;
+use std::fs::{create_dir_all};
 use std::path::Path;
 use tauri::api::path::app_local_data_dir;
 use std::fs;
@@ -183,13 +184,18 @@ fn reload_library(library_id: i64) -> Result<(), String> {
         let comic_path = path.unwrap().path();
         let comic_path_clone = comic_path.clone();
         let comic_path_clone2 = comic_path.clone();
+        let comic_path_clone3 = comic_path.clone();
+        let md = metadata(comic_path_clone3).unwrap();
+        if md.is_file() {
+            continue;
+        }
 
         let title = comic_path.file_name().unwrap().to_str().unwrap();
 
         let comic_path_str = comic_path_clone.to_str().unwrap();
         let mut comic_cover_str = comic_path_str.clone().to_string();
-
-        let comic_dir = fs::read_dir(comic_path_clone2).unwrap();
+        let temp = fs::read_dir(comic_path_clone2);
+        let comic_dir= temp.unwrap();
         let mut comic_count = 0;
         let mut cover_temp = true;
         for file in comic_dir {
@@ -268,7 +274,7 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
         pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
     };
     select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
-    select.bind(1,library_id).unwrap();
+    select.bind(1, library_id).unwrap();
     while let State::Row = select.next().unwrap() {
         return_list.pagination.total = select.read::<i64>(0).unwrap() as i32;
     }
@@ -406,11 +412,11 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
     while let State::Row = select.next().unwrap() {
         path = select.read::<String>(0).unwrap();
     }
-    if path=="" {
+    if path == "" {
         return Err(String::from("路径不存在"));
     }
     let paths = fs::read_dir(path).unwrap();
-    for p in paths{
+    for p in paths {
         let str = String::from(p.unwrap().path().to_str().unwrap());
         println!("{}", str);
         comic_read.page.push(str);
