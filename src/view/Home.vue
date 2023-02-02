@@ -5,49 +5,67 @@
       <Header @query="setSearchWord" noBack/>
     </n-layout-header>
     <n-layout-content :native-scrollbar="false" style="height: calc(100vh - 128px)">
-      <n-list style="margin-top:12px " bordered hoverable clickable show-divider>
-        <template #header>
-          <n-space justify="space-between" size="large">
-            <div style="height: 24px; line-height: 24px;font-size: 20px;display: flex">
-              <div style="width: 24px">
-                <n-icon size="24">
-                  <Library/>
-                </n-icon>
-              </div>
-              <div style="width: 128px">
-                漫画库：
-              </div>
-            </div>
-            <div>
-              <n-button size="tiny" type="primary" circle @click="addLibrary">
-                <template #icon>
-                  <n-icon>
-                    <add/>
+      <n-scrollbar>
+        <n-list style="margin-top:12px " bordered hoverable clickable show-divider>
+          <template #header>
+            <n-space justify="space-between" size="large">
+              <div style="height: 24px; line-height: 24px;font-size: 20px;display: flex">
+                <div style="width: 24px">
+                  <n-icon size="24">
+                    <Library/>
                   </n-icon>
-                </template>
-              </n-button>
-            </div>
-          </n-space>
-        </template>
-        <n-list-item v-for="library in libraryList" :key="library.id" @click="toBookcase(library.id)">
-          {{ library.root }}
-          <template #prefix>
-            <n-icon>
-              <library-outline/>
-            </n-icon>
+                </div>
+                <div style="width: 128px">
+                  漫画库：
+                </div>
+              </div>
+              <div>
+                <n-button size="tiny" type="primary" circle @click="addLibrary">
+                  <template #icon>
+                    <n-icon>
+                      <add/>
+                    </n-icon>
+                  </template>
+                </n-button>
+              </div>
+            </n-space>
           </template>
-          <template #suffix>
-            <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id)">
-              <template #icon>
+          <n-list-item v-for="library in libraryList" :key="library.id" @click="toBookcase(library.id)">
+            {{ library.root }}
+            <template #prefix>
+              <div style="display: flex">
                 <n-icon>
-                  <trash-bin/>
+                  <library-outline/>
                 </n-icon>
-              </template>
-              移除
-            </n-button>
-          </template>
-        </n-list-item>
-      </n-list>
+              </div>
+            </template>
+            <template #suffix>
+              <div style="display: flex">
+                <n-space justify="center">
+                  <n-button tertiary round type="error" size="small" @click.stop="">
+                    <template #icon>
+                      <n-icon>
+                        <trash-bin/>
+                      </n-icon>
+                    </template>
+                    TODO 刷新
+                  </n-button>
+                </n-space>
+                <n-space justify="center">
+                  <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id)">
+                    <template #icon>
+                      <n-icon>
+                        <trash-bin/>
+                      </n-icon>
+                    </template>
+                    移除
+                  </n-button>
+                </n-space>
+              </div>
+            </template>
+          </n-list-item>
+        </n-list>
+      </n-scrollbar>
     </n-layout-content>
     <n-layout-footer
         style="height: 64px;padding: 24px">
@@ -83,6 +101,7 @@ import {
   NListItem,
   NIcon,
   NButton,
+  NScrollbar,
   useMessage
 } from "naive-ui"
 import {Library, LibraryOutline, Add, TrashBin} from "@vicons/ionicons5";
@@ -150,7 +169,7 @@ async function removeLibrary(libraryId: number) {
   await queryLibrary()
 }
 
-async function addLibrary(){
+async function addLibrary() {
   const selected = await open({
     multiple: true,
     directory: true

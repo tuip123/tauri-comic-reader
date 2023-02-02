@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import {NConfigProvider, NMessageProvider,zhCN, dateZhCN,darkTheme,NScrollbar} from 'naive-ui'
+import {NConfigProvider, NMessageProvider, zhCN, dateZhCN, darkTheme, NScrollbar} from 'naive-ui'
+import {nextTick} from "vue";
+
+window.onresize = function () {
+  (<HTMLElement>document.querySelector('.n-scrollbar')).style.maxHeight = document.documentElement.clientHeight + "px"
+}
+nextTick().then(() => {
+  (<HTMLElement>document.querySelector('.n-scrollbar')).style.maxHeight = document.documentElement.clientHeight + "px"
+})
 </script>
 
 <template>
-<!--  todo style中高度通过动态获取-->
-  <n-scrollbar style="max-height: 600px">
-    <n-config-provider :locale="zhCN" :date-locale="dateZhCN" :theme="darkTheme">
+  <n-scrollbar x-scrollable>
+    <n-config-provider :locale="zhCN" :date-locale="dateZhCN" :theme="darkTheme" style="min-width: 400px">
       <n-message-provider>
         <RouterView ref="root"/>
       </n-message-provider>

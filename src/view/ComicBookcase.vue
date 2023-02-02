@@ -3,12 +3,14 @@
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord"/>
     </n-layout-header>
-    <n-layout-content>
-      <n-grid cols="2 s:3 m:4 l:5 xl:6 2xl:7" responsive="screen">
-        <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
-          <ComicItem :comic="comic"/>
-        </n-grid-item>
-      </n-grid>
+    <n-layout-content style="height: calc(100vh - 128px)">
+      <n-scrollbar>
+        <n-grid cols="2 s:3 m:4 l:6 xl:8 2xl:10" responsive="screen">
+          <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
+            <ComicItem :comic="comic"/>
+          </n-grid-item>
+        </n-grid>
+      </n-scrollbar>
     </n-layout-content>
     <n-layout-footer
         style="height: 64px;padding: 24px">
@@ -29,7 +31,17 @@
 </template>
 <!--todo 展示、删除漫画-->
 <script setup lang="ts">
-import {NLayout, NLayoutHeader, NLayoutContent, NLayoutFooter, NSpace, NPagination,NGrid,NGridItem} from "naive-ui"
+import {
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NLayoutFooter,
+  NSpace,
+  NPagination,
+  NGrid,
+  NGridItem,
+  NScrollbar
+} from "naive-ui"
 import Header from "@/components/Header.vue";
 import ComicItem from "@/components/ComicItem.vue";
 import {useRoute, useRouter} from "vue-router";
