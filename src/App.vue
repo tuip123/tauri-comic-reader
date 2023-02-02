@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import {NConfigProvider, NMessageProvider, zhCN, dateZhCN, darkTheme, NScrollbar} from 'naive-ui'
-import {nextTick} from "vue";
 
-window.onresize = function () {
-  (<HTMLElement>document.querySelector('.n-scrollbar')).style.maxHeight = document.documentElement.clientHeight + "px"
-}
-nextTick().then(() => {
-  (<HTMLElement>document.querySelector('.n-scrollbar')).style.maxHeight = document.documentElement.clientHeight + "px"
-})
 </script>
 
 <template>
