@@ -3,13 +3,13 @@
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord"/>
     </n-layout-header>
-    <n-layout-content style="height: calc(100vh - 128px)">
+    <n-layout-content style="height: calc(100vh - 128px);background-color: #2b2b2b">
       <n-scrollbar ref="scrollbar">
-        <n-grid cols="2 s:3 m:4 l:6 xl:8 2xl:10" responsive="screen">
-          <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
-            <ComicItem :comic="comic"/>
-          </n-grid-item>
-        </n-grid>
+          <n-grid cols="2 s:3 m:4 l:6 xl:8 2xl:10" responsive="screen">
+            <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
+              <ComicItem :comic="comic"/>
+            </n-grid-item>
+          </n-grid>
       </n-scrollbar>
     </n-layout-content>
     <n-layout-footer
