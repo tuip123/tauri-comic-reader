@@ -42,7 +42,7 @@
             <template #suffix>
               <div style="display: flex">
                 <n-space justify="center">
-                  <n-button tertiary round type="error" size="small" @click.stop="">
+                  <n-button tertiary round type="error" size="small" @click.stop="reloadLibrary(library.id)">
                     <template #icon>
                       <n-icon>
                         <trash-bin/>
@@ -183,6 +183,11 @@ async function addLibrary() {
       message.error(err as string)
     }
   }
+}
+async function reloadLibrary(libraryId: number) {
+  console.log('123')
+  await invoke("reload_library", {libraryId: libraryId})
+  await queryLibrary()
 }
 
 onMounted(() => {
