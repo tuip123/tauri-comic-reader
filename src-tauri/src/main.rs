@@ -431,6 +431,17 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
     Ok(comic_read)
 }
 
+#[tauri::command]
+fn open_source_folder(folder: &str) -> Result<(), String> {
+    if cfg!(target_os = "windows") {
+        // Command::new("explorer").arg(folder).spawn().unwrap();
+        open::that(folder);
+        Ok(())
+    } else {
+        Err(String::from("不支持当前系统"))
+    }
+}
+
 // todo 更新，根据配置表的版本号
 // todo 查询设置信息
 fn main() {
@@ -442,6 +453,7 @@ fn main() {
             update_config,
             add_third_party_image_viewer,
             open_with_third_party,
+            open_source_folder,
             query_library,
             query_comic,
             delete_comic,

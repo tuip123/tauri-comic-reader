@@ -2,9 +2,9 @@
   <n-card ref="root_card" :bordered="false" >
     <template #cover>
       <img src="https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg" alt=""  @click="testRead" >
-<!--      <img :src="src" alt="">-->
+<!--      <img :src="src" alt="" @click="testRead">-->
     </template>
-    <n-thing content-indented>
+    <n-thing>
       <template #header>
         {{ props.comic.id }}
       </template>
@@ -17,6 +17,9 @@
         <n-space>
           <n-button size="small" @click.stop="testDelete">
             删除
+          </n-button>
+          <n-button size="small"  @click.stop="openSourceFolder">
+            打开文件夹
           </n-button>
         </n-space>
       </template>
@@ -41,6 +44,14 @@ function testDelete() {
 }
 function testRead() {
   invoke('open_with_third_party',{folder:props.comic.path}).then((res)=>{
+    console.log(res)
+  }).catch((err)=>{
+    console.error(err)
+  })
+}
+function openSourceFolder(){
+  console.log('123')
+  invoke('open_source_folder',{folder:props.comic.path}).then((res)=>{
     console.log(res)
   }).catch((err)=>{
     console.error(err)
