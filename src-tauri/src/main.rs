@@ -195,7 +195,7 @@ fn reload_library(library_id: i64) -> Result<(), String> {
         let comic_path_str = comic_path_clone.to_str().unwrap();
         let mut comic_cover_str = comic_path_str.clone().to_string();
         let temp = fs::read_dir(comic_path_clone2);
-        let comic_dir= temp.unwrap();
+        let comic_dir = temp.unwrap();
         let mut comic_count = 0;
         let mut cover_temp = true;
         for file in comic_dir {
@@ -307,11 +307,15 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
 // 配置相关
 #[tauri::command]
 fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
-    let conn = get_conn().unwrap();
-    let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
-    update.bind(1, path).unwrap();
-    update.next().unwrap();
-    Ok(())
+    if cfg!(target_os = "windows") {
+        let conn = get_conn().unwrap();
+        let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
+        update.bind(1, path).unwrap();
+        update.next().unwrap();
+        Ok(())
+    } else {
+        Err(String::from("不支持当前系统"))
+    }
 }
 
 #[tauri::command]
@@ -395,9 +399,12 @@ fn open_with_third_party(folder: &str) -> Result<(), String> {
     if third_party_path == "null" {
         return Err(String::from("未定义第三方启动器"));
     }
-    let cmd_str = third_party_path + " " + folder;
-    Command::new("cmd").arg("/c").arg(cmd_str).output().expect("cmd exec error!");
-    Ok(())
+    if cfg!(target_os = "windows") {
+        Command::new(third_party_path).arg(folder).spawn().unwrap();
+        Ok(())
+    } else {
+        Err(String::from("不支持当前系统"))
+    }
 }
 
 #[tauri::command]
