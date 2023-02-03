@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
-import {ref} from 'vue'
+import {ref} from 'vue';
+import {NButton} from 'naive-ui';
 
 interface Pagination {
   current: number,
@@ -104,16 +105,29 @@ async function readComic() {
     console.error(e)
   }
 }
+
 import {useRouter} from "vue-router";
+
 const router = useRouter()
 
-function routerFn(){
+function routerFn() {
   router.push({
-    path:'/ComicBookcase',
-    query:{
-      id:temp.value
+    path: '/ComicBookcase',
+    query: {
+      id: temp.value
     }
   })
+}
+
+const img = ref()
+const emit = defineEmits(['close'])
+
+function closePanel() {
+  emit('close')
+}
+
+function setDeleteFileIsTrue(value: boolean) {
+  invoke("update_config", {key: 'delete_source_file', value: value.toString()})
 }
 </script>
 
@@ -121,23 +135,28 @@ function routerFn(){
   <div class="card">
     <input v-model="temp">
     <br>
-    <button type="button" @click="addLibrary()">addLibrary</button>
+    <n-button round type="primary" @click="closePanel()">CLOSE</n-button>
     <br>
-    <button type="button" @click="reloadLibrary()">reloadLibrary</button>
+    <n-button round @click="addLibrary()">addLibrary</n-button>
     <br>
-    <button type="button" @click="addThirdPartyImageViewer()">addThirdPartyImageViewer</button>
+    <n-button round @click="reloadLibrary()">reloadLibrary</n-button>
     <br>
-    <button type="button" @click="openWithThirdParty()">openWithThirdParty</button>
+    <n-button round @click="addThirdPartyImageViewer()">addThirdPartyImageViewer</n-button>
     <br>
-    <button type="button" @click="queryLibrary()">queryLibrary</button>
+    <n-button round @click="openWithThirdParty()">openWithThirdParty</n-button>
     <br>
-    <button type="button" @click="queryComic()">queryComic</button>
+    <n-button round @click="queryLibrary()">queryLibrary</n-button>
     <br>
-    <button type="button" @click="deleteComic()">deleteComic</button>
+    <n-button round @click="queryComic()">queryComic</n-button>
     <br>
-    <button type="button" @click="readComic()">readComic</button>
+    <n-button round @click="deleteComic()">deleteComic</n-button>
     <br>
-    <button type="button" @click="routerFn()">router</button>
-
+    <n-button round type="error" @click="setDeleteFileIsTrue(true)">setDeleteFileIsTrue</n-button>
+    <br>
+    <n-button round type="error" @click="setDeleteFileIsTrue(false)">setDeleteFileIsFalse</n-button>
+    <br>
+    <n-button round @click="readComic()">readComic</n-button>
+    <br>
+    <n-button round @click="routerFn()">router</n-button>
   </div>
 </template>

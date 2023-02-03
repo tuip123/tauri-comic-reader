@@ -1,5 +1,5 @@
 <template>
-  <Test v-show="false"/>
+  <Test v-show="testPanel" @close="testPanel=false"/>
   <n-layout vertical size="large">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord" noBack/>
@@ -125,7 +125,7 @@ interface LibraryList {
   list: Library[],
   pagination: Pagination
 }
-
+const testPanel = ref(true)
 const libraryList = ref<Library[]>([])
 const pagination = ref<Pagination>({
   current: 1,
