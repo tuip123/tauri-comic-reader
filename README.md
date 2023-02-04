@@ -1,16 +1,46 @@
-# Tauri + Vue 3 + TypeScript
+# tauri-comic-reader
+基于 tauri+vite+vue3 开发的本地漫画阅读器
+****
+## 简介
+学习开发tauri的练手项目，基于tauri的本地漫画库管理与漫画阅读器，可使用第三方图片查看器启动。
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+第三方启动器建议使用HoneyView。
+****
+## 更新日志
+v 0.0.1
 
-## Recommended IDE Setup
+实现基础的管理与第三方启动器启动
+****
+## TODO
+v 0.1.0
+* **页面开发**
+  1. 设置页面
+  2. 漫画书架
+  3. 漫画阅读
+* **系统适配**
+  1. macOS
+  2. Linux（ArchLinux 与 Ubuntu）
+* **发布release**
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+v 0.2.0
+* **功能开发**
+1. 重构部分rust方法
+2. 增加版本更新时，（如果需要）更新数据库的功能
 
-## Type Support For `.vue` Imports in TS
+v 0.3.0
+~~还早呢~~
+* **~~功能开发~~**
+1. ~~检查更新~~
+2. ~~自动更新~~
 
-Since TypeScript cannot handle type information for `.vue` imports, they are shimmed to be a generic Vue component type by default. In most cases this is fine if you don't really care about component prop types outside of templates. However, if you wish to get actual prop types in `.vue` imports (for example to get props validation when using manual `h(...)` calls), you can enable Volar's Take Over mode by following these steps:
+****
+## 编译与使用
+***请注意，项目目前并不稳定，可能无法达到预期效果***
 
-1. Run `Extensions: Show Built-in Extensions` from VS Code's command palette, look for `TypeScript and JavaScript Language Features`, then right click and select `Disable (Workspace)`. By default, Take Over mode will enable itself if the default TypeScript extension is disabled.
-2. Reload the VS Code window by running `Developer: Reload Window` from the command palette.
+项目目前尚未完善，并未发布release
 
-You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/volar/discussions/471).
+想要使用该阅读器你需要
+1. 根据tauri的<a href="https://tauri.app/zh-cn/v1/guides/getting-started/prerequisites" target="_blank">开始指南</a>完成环境配置
+2. ```git clone```
+3. ```npm i```
+4. 使用```npm run tauri dev```启动项目或```npm run tauri build```构建项目

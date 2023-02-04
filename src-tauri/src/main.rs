@@ -162,6 +162,7 @@ fn add_library(path: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn reload_library(library_id: i64) -> Result<(), String> {
+    // TODO:重构方法 增加字段delete；重新加载时候，采用两个map，一个是本地文件夹，一个是数据库文件夹，两个互相比对删除，剩余的本地文件夹全部添加到数据库，数据库文件夹设置delete=1
     let conn = get_conn().unwrap();
 
     let mut delete = conn.prepare("delete from comic where libraryId = ?").unwrap();
