@@ -1,5 +1,4 @@
 <template>
-  <Test v-show="testPanel" @close="testPanel=false"/>
   <n-layout vertical size="large">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord" noBack/>
@@ -85,7 +84,6 @@
   </n-layout>
 </template>
 <script setup lang="ts">
-import Test from "@/components/Test.vue";
 import Header from "@/components/Header.vue";
 import {invoke} from "@tauri-apps/api/tauri";
 import {ref, onMounted} from "vue";
@@ -125,7 +123,6 @@ interface LibraryList {
   list: Library[],
   pagination: Pagination
 }
-const testPanel = ref(true)
 const libraryList = ref<Library[]>([])
 const pagination = ref<Pagination>({
   current: 1,
@@ -185,13 +182,13 @@ async function addLibrary() {
 }
 
 async function reloadLibrary(libraryId: number) {
-  console.log('123')
   await invoke("reload_library", {libraryId: libraryId})
   await queryLibrary()
 }
 
 onMounted(() => {
   queryLibrary()
+//  todo 获取config
 })
 </script>
 

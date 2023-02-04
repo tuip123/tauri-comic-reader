@@ -2,7 +2,12 @@
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from '@tauri-apps/api/dialog';
 import {ref} from 'vue';
-import {NButton} from 'naive-ui';
+import {NButton,NInput} from 'naive-ui';
+
+
+import {useRouter} from "vue-router";
+
+const router = useRouter()
 
 interface Pagination {
   current: number,
@@ -106,10 +111,6 @@ async function readComic() {
   }
 }
 
-import {useRouter} from "vue-router";
-
-const router = useRouter()
-
 function routerFn() {
   router.push({
     path: '/ComicBookcase',
@@ -133,9 +134,7 @@ function setDeleteFileIsTrue(value: boolean) {
 
 <template>
   <div class="card">
-    <input v-model="temp">
-    <br>
-    <n-button round type="primary" @click="closePanel()">CLOSE</n-button>
+    <n-input v-model="temp" />
     <br>
     <n-button round @click="addLibrary()">addLibrary</n-button>
     <br>
