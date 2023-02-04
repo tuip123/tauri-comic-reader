@@ -5,11 +5,9 @@
     </n-layout-header>
     <n-layout-content style="height: calc(100vh - 128px)">
       <n-scrollbar ref="scrollbar">
-          <n-grid cols="2 s:3 m:4 l:6 xl:8 2xl:10" responsive="screen">
-            <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 12px">
-              <n-card>
+          <n-grid cols="2 s:2 m:3 l:6 xl:6 2xl:8" responsive="screen">
+            <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 6px">
                 <ComicItem :comic="comic" @delete="queryComic"/>
-              </n-card>
             </n-grid-item>
           </n-grid>
       </n-scrollbar>
@@ -21,7 +19,7 @@
             v-model:page="pagination.current"
             v-model:page-size="pagination.size"
             :item-count="pagination.total"
-            :page-sizes="[9, 18, 27]"
+            :page-sizes="[6, 12, 18, 24]"
             :page-slot="5"
             show-size-picker
             :on-update:page="pageChange"
@@ -31,7 +29,6 @@
     </n-layout-footer>
   </n-layout>
 </template>
-<!--todo 展示、删除漫画-->
 <script setup lang="ts">
 import {
   NLayout,
@@ -42,12 +39,11 @@ import {
   NPagination,
   NGrid,
   NGridItem,
-  NScrollbar,
-    NCard
+  NScrollbar
 } from "naive-ui"
 import Header from "@/components/Header.vue";
 import ComicItem from "@/components/ComicItem.vue";
-import {useRoute, useRouter} from "vue-router";
+import {useRoute} from "vue-router";
 import {ref, onMounted} from "vue";
 import {invoke} from "@tauri-apps/api/tauri";
 
@@ -73,12 +69,11 @@ interface ComicList {
 
 const pagination = ref<Pagination>({
   current: 1,
-  size: 9,
+  size: 12,
   total: 1
 })
 const comicList = ref<Comic[]>([])
 const scrollbar = ref()
-const router = useRouter()
 const route = useRoute()
 const libraryId = route.query.libraryId
 
@@ -86,6 +81,7 @@ const searchWord = ref("")
 
 function setSearchWord(word: string) {
   searchWord.value = word
+  console.log(searchWord.value)
   queryComic()
 }
 
