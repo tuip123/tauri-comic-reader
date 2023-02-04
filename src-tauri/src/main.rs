@@ -3,6 +3,7 @@ all(not(debug_assertions), target_os = "windows"),
 windows_subsystem = "windows"
 )]
 
+use std::collections::{HashSet};
 use std::process::Command;
 use std::fs::metadata;
 use sqlite::{Connection, State, Statement};
@@ -11,6 +12,15 @@ use std::path::Path;
 use tauri::api::path::app_local_data_dir;
 use std::fs;
 use serde_with::serde_as;
+
+#[serde_as]
+#[derive(serde::Serialize)]
+#[derive(Eq, Hash, PartialEq)]
+#[derive(Debug)]
+pub struct Config {
+    pub key: String,
+    pub value: String,
+}
 
 #[serde_as]
 #[derive(serde::Serialize)]
@@ -329,6 +339,21 @@ fn update_config(key: &str, value: &str) -> Result<(), String> {
     Ok(())
 }
 
+
+#[tauri::command]
+fn get_config() -> Result<HashSet<Config>, String> {
+    let conn = get_conn().unwrap();
+    let mut select = conn.prepare("select key,value from config").unwrap();
+    let mut set: HashSet<Config> = HashSet::new();
+    while let State::Row = select.next().unwrap() {
+        let mut config: Config = Config { key: "".to_string(), value: "".to_string() };
+        config.key = select.read::<String>(0).unwrap();
+        config.value = select.read::<String>(1).unwrap();
+        set.insert(config);
+    }
+    Ok(set)
+}
+
 // 删除相关
 #[tauri::command]
 fn delete_comic(id: i64) {
@@ -436,12 +461,13 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
 fn open_source_folder(folder: &str) -> Result<(), String> {
     if cfg!(target_os = "windows") {
         // Command::new("explorer").arg(folder).spawn().unwrap();
-        open::that(folder);
+        open::that(folder).unwrap();
         Ok(())
     } else {
         Err(String::from("不支持当前系统"))
     }
 }
+
 
 // todo 更新，根据配置表的版本号
 // todo 查询设置信息
@@ -452,6 +478,7 @@ fn main() {
             add_library,
             reload_library,
             update_config,
+            get_config,
             add_third_party_image_viewer,
             open_with_third_party,
             open_source_folder,

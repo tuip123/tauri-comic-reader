@@ -43,6 +43,11 @@ import {NCard, NThing, NButton, NSpace, NEllipsis, NIcon, useMessage} from 'naiv
 import {FolderOpenOutline, TrashOutline} from '@vicons/ionicons5'
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri"
 
+
+import {useConfigStore} from "../store/config";
+const config = useConfigStore()
+console.log(config.version)
+
 const message = useMessage()
 const props = defineProps(['comic'])
 const src = convertFileSrc(props.comic.cover)

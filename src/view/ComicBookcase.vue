@@ -5,11 +5,11 @@
     </n-layout-header>
     <n-layout-content style="height: calc(100vh - 128px)">
       <n-scrollbar ref="scrollbar">
-          <n-grid cols="2 s:2 m:3 l:6 xl:6 2xl:8" responsive="screen">
-            <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 6px">
-                <ComicItem :comic="comic" @delete="queryComic"/>
-            </n-grid-item>
-          </n-grid>
+        <n-grid cols="2 s:2 m:3 l:6 xl:6 2xl:8" responsive="screen">
+          <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 6px">
+            <ComicItem :comic="comic" @delete="queryComic"/>
+          </n-grid-item>
+        </n-grid>
       </n-scrollbar>
     </n-layout-content>
     <n-layout-footer
@@ -46,7 +46,6 @@ import ComicItem from "@/components/ComicItem.vue";
 import {useRoute} from "vue-router";
 import {ref, onMounted} from "vue";
 import {invoke} from "@tauri-apps/api/tauri";
-
 interface Pagination {
   current: number,
   size: number,
@@ -94,7 +93,7 @@ async function queryComic() {
   }) as ComicList
   pagination.value = res.pagination
   comicList.value = res.list
-  scrollbar.value.scrollTo({top:0})
+  scrollbar.value.scrollTo({top: 0})
 }
 
 async function pageChange(num: number) {

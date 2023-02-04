@@ -14,6 +14,7 @@
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
     "@vicons/ionicons5": "^0.12.0",
+    "pinia": "^2.0.30",
     "vue": "^3.2.45",
     "vue-lazyload": "^3.0.0-rc.2",
     "vue-router": "^4.1.6"
