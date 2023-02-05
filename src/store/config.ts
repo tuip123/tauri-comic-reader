@@ -28,9 +28,16 @@ const config = useConfigStore()
 await getConfig(config)
 export async function getConfig(config: Config) {
     let res = await invoke("get_config") as Array<ConfigMap>
-    console.log(res)
     for (let re of res) {
-        let key = re.key
-        config[key] = re.value
+        if (re.key === 'third_party_open') {
+            config.third_party_open = re.value === 'true'
+        }
+        else if (re.key === 'delete_source_file')
+        {
+            config.delete_source_file = re.value === 'true'
+        }
+        else {
+            config[re.key] = re.value
+        }
     }
 }
