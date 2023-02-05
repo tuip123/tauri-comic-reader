@@ -9,26 +9,38 @@
         <n-thing>
           <template #header>
             <div>
-              {{ BASE_NAME }} | {{ CN_NAME }}
+              {{ BASE_NAME }}
+              <n-divider vertical/>
+              {{ CN_NAME }}
             </div>
           </template>
+
+          <template #header-extra>
+            <div>
+              <n-divider vertical/>
+              版本：{{ config.version }}
+            </div>
+          </template>
+
           <template #footer>
+            <n-divider/>
             <n-grid :cols="6" style="padding-bottom: 12px">
               <n-gi>
                 <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
                   <n-switch :value="config.third_party_open" @update:value="thirdPartyOpenSetting">
                     <template #checked>
-                      第三方阅读
+                      使用第三方阅读
                     </template>
                     <template #unchecked>
-                      应用内阅读
+                      使用应用内阅读
                     </template>
                   </n-switch>
                 </div>
               </n-gi>
               <n-gi>
                 <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
-                  <n-switch :value="config.delete_source_file" @update:value="deleteSourceFileSetting">
+                  <n-switch :value="config.delete_source_file" @update:value="deleteSourceFileSetting"
+                            :rail-style="railStyle">
                     <template #checked>
                       删除源文件
                     </template>
@@ -39,13 +51,13 @@
                 </div>
               </n-gi>
             </n-grid>
-            <n-grid :cols="6">
-              <n-gi>
+            <n-grid :cols="12">
+              <n-gi span="2">
                 <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
                   第三方阅读器路径：
                 </div>
               </n-gi>
-              <n-gi span="5">
+              <n-gi span="9">
                 <div>
                   <n-input ref="partyInput" :disabled="!config.third_party_open" type="text"
                            :placeholder="config.third_party_image_viewer"
@@ -53,11 +65,6 @@
                 </div>
               </n-gi>
             </n-grid>
-          </template>
-          <template #header-extra>
-            <div>
-              版本：{{ config.version }}
-            </div>
           </template>
         </n-thing>
 
@@ -67,35 +74,101 @@
 </template>
 <!--todo 修改config-->
 <script setup lang="ts">
-import {NLayout, NLayoutHeader, NLayoutContent, NCard, NInput, NGrid, NGi, NSwitch, NSpace, NThing} from "naive-ui"
+import {
+  NLayout,
+  NLayoutHeader,
+  NLayoutContent,
+  NCard,
+  NInput,
+  NGrid,
+  NGi,
+  NSwitch,
+  NThing,
+  NDivider, useMessage
+} from "naive-ui"
 import Header from "@/components/Header.vue";
 import Test from "@/components/Test.vue";
-import {useConfigStore} from "../store/config";
-import {ref} from 'vue'
+import {useConfigStore, getConfig} from "../store/config";
+import {CSSProperties, ref} from 'vue'
+import {invoke} from "@tauri-apps/api/tauri";
+import {open} from "@tauri-apps/api/dialog";
 
 const BASE_NAME = import.meta.env.VITE_APP_BASE_NAME
 const CN_NAME = import.meta.env.VITE_APP_CN_NAME
 
 const config = useConfigStore()
-
 const partyInput = ref()
-
-function setPath() {
-  partyInput.value.blur()
-//  单独设置path：点击 利用open打开文件 判断是否成功 保存路径 保存设置 重新获取设置
+const message = useMessage()
+const railStyle = ({focused, checked}: { focused: boolean, checked: boolean }) => {
+  const style: CSSProperties = {}
+  if (checked) {
+    style.background = '#d03050'
+    if (focused) {
+      style.boxShadow = '0 0 0 2px #d0305040'
+    }
+  }
+  return style
 }
 
-function thirdPartyOpenSetting() {
-  config.third_party_open = !config.third_party_open
-//  打开 第三方启动器：点击按钮，判断路径是否为空->利用open打开exe文件 else 直接设置third_party_open 保存设置 重新获取设置
-//  open打开是否成功->保存路径，保存third_party_open，重新获取config else third_party_open不改变
-
-//  关闭 直接保存设置 重新获取设置
+async function setPath() {
+  if (config.third_party_open) {
+    partyInput.value.blur()
+    const selected = await open({
+      multiple: false,
+      directory: false,
+      filters: [{
+        name: '可执行程序',
+        extensions: ['exe']
+      }, {
+        name: '所有文件',
+        extensions: ['*']
+      }]
+    }) as string | unknown;
+    if (selected !== null) {
+      await invoke("update_config", {key: 'third_party_image_viewer', value: selected})
+      message.success('设置成功')
+      await getConfig()
+    }
+  }
 }
 
-function deleteSourceFileSetting() {
-  config.delete_source_file = !config.delete_source_file
-//  设置关闭 保存设置 重新获取设置
+async function thirdPartyOpenSetting() {
+  if (config.third_party_open) {
+    await invoke("update_config", {key: 'third_party_image_viewer', value: "null"})
+    await invoke("update_config", {key: 'third_party_open', value: "false"})
+    message.info('已关闭第三方启动')
+  } else {
+    const selected = await open({
+      multiple: false,
+      directory: false,
+      filters: [{
+        name: '可执行程序',
+        extensions: ['exe']
+      }, {
+        name: '所有文件',
+        extensions: ['*']
+      }]
+    }) as string | unknown;
+    if (selected !== null) {
+      await invoke("update_config", {key: 'third_party_image_viewer', value: selected})
+      await invoke("update_config", {key: 'third_party_open', value: "true"})
+      message.success('设置成功')
+    }
+    else {
+      message.info('已取消')
+    }
+  }
+  await getConfig()
+}
+
+async function deleteSourceFileSetting() {
+  await invoke("update_config", {key: 'delete_source_file', value: config.delete_source_file ? 'false' : 'true'})
+  await getConfig()
+  if (config.delete_source_file) {
+    message.error('请注意，现在删除书柜中的漫画会导致文件被删除！！！')
+  } else {
+    message.info('已关闭删除源文件功能')
+  }
 }
 </script>
 

@@ -41,7 +41,7 @@
             <template #suffix>
               <div style="display: flex" >
                 <n-space justify="center" style="padding-right: 8px; ">
-                  <n-button tertiary round type="primary" size="small" @click.stop="reloadLibrary(library.id)">
+                  <n-button tertiary round type="primary" size="small" @click.stop="reloadLibrary(library.id,library.root)">
                     <template #icon>
                       <n-icon>
                         <reload-sharp/>
@@ -51,7 +51,7 @@
                   </n-button>
                 </n-space>
                 <n-space justify="center">
-                  <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id)">
+                  <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id,library.root)">
                     移除
                     <template #icon>
                       <n-icon>
@@ -160,9 +160,10 @@ function toBookcase(libraryId: number) {
   router.push({path: '/ComicBookcase', query: {libraryId: libraryId}})
 }
 
-async function removeLibrary(libraryId: number) {
+async function removeLibrary(libraryId: number,libraryRoot:string) {
   await invoke('delete_library', {id: libraryId})
   await queryLibrary()
+  message.error('已经删除 '+libraryRoot)
 }
 
 async function addLibrary() {
@@ -181,14 +182,14 @@ async function addLibrary() {
   }
 }
 
-async function reloadLibrary(libraryId: number) {
+async function reloadLibrary(libraryId: number,libraryRoot:string) {
   await invoke("reload_library", {libraryId: libraryId})
   await queryLibrary()
+  message.info('已重新加载 '+libraryRoot)
 }
 
 onMounted(() => {
   queryLibrary()
-//  todo 获取config
 })
 </script>
 
