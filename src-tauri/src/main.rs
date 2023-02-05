@@ -6,7 +6,8 @@ windows_subsystem = "windows"
 use std::collections::{HashSet};
 use std::process::Command;
 use std::fs::metadata;
-use sqlite::{Connection, State, Statement};
+use sqlite::State;
+use sqlite::{Connection, Statement};
 use std::fs::{create_dir_all};
 use std::path::Path;
 use tauri::api::path::app_local_data_dir;
@@ -144,19 +145,19 @@ fn add_library(path: &str) -> Result<(), String> {
     let conn = get_conn().unwrap();
     // 查找有无记录
     let mut insert = conn.prepare("select Id from library where root = ? limit 1").unwrap();
-    insert.bind(1, path).unwrap();
-    while let State::Row = insert.next().unwrap() {
+    insert.bind((1, path)).unwrap();
+    while let Ok(State::Row) = insert.next() {
         return Err(String::from("库路径重复"));
     }
     // 添加库记录
     insert = conn.prepare("insert into library (root) values (?)").unwrap();
-    insert.bind(1, path).unwrap();
+    insert.bind((1, path)).unwrap();
     insert.next().unwrap();
     insert = conn.prepare("select Id from library where root = ? limit 1").unwrap();
-    insert.bind(1, path).unwrap();
+    insert.bind((1, path)).unwrap();
     let mut library_id = 0;
-    while let State::Row = insert.next().unwrap() {
-        library_id = insert.read::<i64>(0).unwrap();
+    while let Ok(State::Row) = insert.next() {
+        library_id = insert.read::<i64,_>(0).unwrap();
     }
     // 添加库下漫画记录
     let result = reload_library(library_id);
@@ -176,14 +177,14 @@ fn reload_library(library_id: i64) -> Result<(), String> {
     let conn = get_conn().unwrap();
 
     let mut delete = conn.prepare("delete from comic where libraryId = ?").unwrap();
-    delete.bind(1, library_id).unwrap();
+    delete.bind((1, library_id)).unwrap();
     delete.next().unwrap();
 
     let mut select = conn.prepare("select root from library where Id = ?").unwrap();
-    select.bind(1, library_id).unwrap();
+    select.bind((1, library_id)).unwrap();
     let mut root = String::from("");
-    while let State::Row = select.next().unwrap() {
-        root = select.read::<String>(0).unwrap();
+    while let Ok(State::Row) = select.next(){
+        root = select.read::<String, _>(0).unwrap();
     }
     if root == "" {
         return Err(String::from("库id不存在"));
@@ -226,17 +227,17 @@ fn reload_library(library_id: i64) -> Result<(), String> {
             continue;
         }
         count += 1;
-        insert.bind(1, library_id).unwrap();
-        insert.bind(2, title).unwrap();
-        insert.bind(3, comic_path_str).unwrap();
-        insert.bind(4, &*comic_cover_str).unwrap();
-        insert.bind(5, comic_count).unwrap();
+        insert.bind((1, library_id)).unwrap();
+        insert.bind((2, title)).unwrap();
+        insert.bind((3, comic_path_str)).unwrap();
+        insert.bind((4, &*comic_cover_str)).unwrap();
+        insert.bind((5, comic_count)).unwrap();
         insert.next().unwrap();
     }
 
     let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
-    update.bind(1, count).unwrap();
-    update.bind(2, library_id).unwrap();
+    update.bind((1, count)).unwrap();
+    update.bind((2, library_id)).unwrap();
     update.next().unwrap();
     Ok(())
 }
@@ -253,22 +254,22 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
     };
     select = conn.prepare("select count(1) from library").unwrap();
     while let State::Row = select.next().unwrap() {
-        return_list.pagination.total = select.read::<i64>(0).unwrap() as i32;
+        return_list.pagination.total = select.read::<i64,_>(0).unwrap() as i32;
     }
     if search.trim().len() == 0 {
         select = conn.prepare("select Id,root,count from library LIMIT ? OFFSET ?").unwrap();
-        select.bind(1, page_size).unwrap();
-        select.bind(2, offset).unwrap();
+        select.bind((1, page_size)).unwrap();
+        select.bind((2, offset)).unwrap();
     } else {
         select = conn.prepare("select Id,root,count from library where root LIKE ? LIMIT ? OFFSET ?").unwrap();
-        select.bind(1, &*String::from(format!("%{}%", search.trim()))).unwrap();
-        select.bind(2, page_size).unwrap();
-        select.bind(3, offset).unwrap();
+        select.bind((1, &*String::from(format!("%{}%", search.trim())))).unwrap();
+        select.bind((2, page_size)).unwrap();
+        select.bind((3, offset)).unwrap();
     }
     while let State::Row = select.next().unwrap() {
         let library: Library = Library {
-            id: select.read::<i64>(0).unwrap(),
-            root: select.read::<String>(1).unwrap(),
+            id: select.read::<i64,_>(0).unwrap(),
+            root: select.read::<String,_>(1).unwrap(),
         };
         return_list.list.push(library);
     }
@@ -285,29 +286,29 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
         pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
     };
     select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
-    select.bind(1, library_id).unwrap();
+    select.bind((1, library_id)).unwrap();
     while let State::Row = select.next().unwrap() {
-        return_list.pagination.total = select.read::<i64>(0).unwrap() as i32;
+        return_list.pagination.total = select.read::<i64,_>(0).unwrap() as i32;
     }
     if search.trim().len() == 0 {
         select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? LIMIT ? OFFSET ?").unwrap();
-        select.bind(1, library_id).unwrap();
-        select.bind(2, page_size).unwrap();
-        select.bind(3, offset).unwrap();
+        select.bind((1, library_id)).unwrap();
+        select.bind((2, page_size)).unwrap();
+        select.bind((3, offset)).unwrap();
     } else {
         select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? and title LIKE ? LIMIT ? OFFSET ?").unwrap();
-        select.bind(1, library_id).unwrap();
-        select.bind(2, &*String::from(format!("%{}%", search.trim()))).unwrap();
-        select.bind(3, page_size).unwrap();
-        select.bind(4, offset).unwrap();
+        select.bind((1, library_id)).unwrap();
+        select.bind((2, &*String::from(format!("%{}%", search.trim())))).unwrap();
+        select.bind((3, page_size)).unwrap();
+        select.bind((4, offset)).unwrap();
     }
     while let State::Row = select.next().unwrap() {
         let comic: Comic = Comic {
-            id: select.read::<i64>(0).unwrap(),
-            path: select.read::<String>(1).unwrap(),
-            title: select.read::<String>(2).unwrap(),
-            cover: select.read::<String>(3).unwrap(),
-            count: select.read::<i64>(4).unwrap(),
+            id: select.read::<i64,_>(0).unwrap(),
+            path: select.read::<String,_>(1).unwrap(),
+            title: select.read::<String,_>(2).unwrap(),
+            cover: select.read::<String,_>(3).unwrap(),
+            count: select.read::<i64,_>(4).unwrap(),
             library_id,
         };
         return_list.list.push(comic);
@@ -321,7 +322,7 @@ fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
     if cfg!(target_os = "windows") {
         let conn = get_conn().unwrap();
         let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
-        update.bind(1, path).unwrap();
+        update.bind((1, path)).unwrap();
         update.next().unwrap();
         Ok(())
     } else {
@@ -333,8 +334,8 @@ fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
 fn update_config(key: &str, value: &str) -> Result<(), String> {
     let conn = get_conn().unwrap();
     let mut update = conn.prepare("update config set value = ? where key = ?").unwrap();
-    update.bind(1, value).unwrap();
-    update.bind(2, key).unwrap();
+    update.bind((1, value)).unwrap();
+    update.bind((2, key)).unwrap();
     update.next().unwrap();
     Ok(())
 }
@@ -347,8 +348,8 @@ fn get_config() -> Result<HashSet<Config>, String> {
     let mut set: HashSet<Config> = HashSet::new();
     while let State::Row = select.next().unwrap() {
         let mut config: Config = Config { key: "".to_string(), value: "".to_string() };
-        config.key = select.read::<String>(0).unwrap();
-        config.value = select.read::<String>(1).unwrap();
+        config.key = select.read::<String,_>(0).unwrap();
+        config.value = select.read::<String,_>(1).unwrap();
         set.insert(config);
     }
     Ok(set)
@@ -362,7 +363,7 @@ fn delete_comic(id: i64) {
     let mut select = conn.prepare("select value from config where key = 'delete_source_file'").unwrap();
     let mut delete_source_file = false;
     while let State::Row = select.next().unwrap() {
-        let temp = select.read::<String>(0).unwrap();
+        let temp = select.read::<String,_>(0).unwrap();
         if temp == "true" {
             delete_source_file = true;
         }
@@ -370,34 +371,34 @@ fn delete_comic(id: i64) {
     // 执行删除源文件
     if delete_source_file == true {
         select = conn.prepare("select path from comic where id = ?").unwrap();
-        select.bind(1, id).unwrap();
+        select.bind((1, id)).unwrap();
         let mut path = String::from("");
         while let State::Row = select.next().unwrap() {
-            path = select.read::<String>(0).unwrap();
+            path = select.read::<String,_>(0).unwrap();
         }
         fs::remove_dir_all(path).unwrap();
     }
     // 获取library id
     select = conn.prepare("select libraryId from comic where id = ?").unwrap();
-    select.bind(1, id).unwrap();
+    select.bind((1, id)).unwrap();
     let mut library_id = 0;
     while let State::Row = select.next().unwrap() {
-        library_id = select.read::<i64>(0).unwrap();
+        library_id = select.read::<i64,_>(0).unwrap();
     }
     // 执行删除表记录
     let mut delete = conn.prepare("delete from comic where id = ?").unwrap();
-    delete.bind(1, id).unwrap();
+    delete.bind((1, id)).unwrap();
     delete.next().unwrap();
     // 更新library数据
     select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
-    select.bind(1, library_id).unwrap();
+    select.bind((1, library_id)).unwrap();
     let mut count = 0;
     while let State::Row = select.next().unwrap() {
-        count = select.read::<i64>(0).unwrap();
+        count = select.read::<i64,_>(0).unwrap();
     }
     let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
-    update.bind(1, count).unwrap();
-    update.bind(2, library_id).unwrap();
+    update.bind((1, count)).unwrap();
+    update.bind((2, library_id)).unwrap();
     update.next().unwrap();
 }
 
@@ -405,11 +406,11 @@ fn delete_comic(id: i64) {
 fn delete_library(id: i64) {
     let conn = get_conn().unwrap();
     let mut delete = conn.prepare("delete from library where id = ?").unwrap();
-    delete.bind(1, id).unwrap();
+    delete.bind((1, id)).unwrap();
     delete.next().unwrap();
 
     delete = conn.prepare("delete from comic where libraryId = ?").unwrap();
-    delete.bind(1, id).unwrap();
+    delete.bind((1, id)).unwrap();
     delete.next().unwrap();
 }
 
@@ -420,7 +421,7 @@ fn open_with_third_party(folder: &str) -> Result<(), String> {
     let mut select = conn.prepare("select value from config where key = 'third_party_image_viewer'").unwrap();
     let mut third_party_path = String::from("");
     while let State::Row = select.next().unwrap() {
-        third_party_path = select.read::<String>(0).unwrap();
+        third_party_path = select.read::<String, _>(0).unwrap();
     }
     if third_party_path == "null" {
         return Err(String::from("未定义第三方启动器"));
@@ -440,10 +441,10 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
     };
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select path from comic where id = ?").unwrap();
-    select.bind(1, id).unwrap();
+    select.bind((1, id)).unwrap();
     let mut path = String::from("");
     while let State::Row = select.next().unwrap() {
-        path = select.read::<String>(0).unwrap();
+        path = select.read::<String,_>(0).unwrap();
     }
     if path == "" {
         return Err(String::from("路径不存在"));
