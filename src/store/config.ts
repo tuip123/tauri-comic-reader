@@ -10,9 +10,9 @@ export const useConfigStore = defineStore('counter', {
     } as Config),
 })
 
-interface Config {
+export interface Config {
     version: string,
-    third_party_image_viewer: string | unknown,
+    third_party_image_viewer: string,
     third_party_open: boolean,
     delete_source_file: boolean,
 
@@ -35,7 +35,7 @@ export async function getConfig() {
         } else if (re.key === 'delete_source_file') {
             config.delete_source_file = re.value === 'true'
         } else if (re.key === 'third_party_image_viewer') {
-            config.third_party_image_viewer = re.value === 'null' ? null : re.value;
+            config.third_party_image_viewer = <string>re.value === 'null' ? '未设置' : re.value;
         } else {
             config[re.key] = re.value
         }

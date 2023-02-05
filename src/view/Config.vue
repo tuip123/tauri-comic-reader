@@ -87,7 +87,7 @@ import {
 } from "naive-ui"
 import Header from "@/components/Header.vue";
 import Test from "@/components/Test.vue";
-import {useConfigStore, getConfig} from "../store/config";
+import {useConfigStore, getConfig,Config} from "../store/config";
 import {CSSProperties, ref} from 'vue'
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from "@tauri-apps/api/dialog";
@@ -95,7 +95,7 @@ import {open} from "@tauri-apps/api/dialog";
 const BASE_NAME = import.meta.env.VITE_APP_BASE_NAME
 const CN_NAME = import.meta.env.VITE_APP_CN_NAME
 
-const config = useConfigStore()
+const config = useConfigStore() as Config
 const partyInput = ref()
 const message = useMessage()
 const railStyle = ({focused, checked}: { focused: boolean, checked: boolean }) => {
