@@ -46,7 +46,6 @@ import {convertFileSrc, invoke} from "@tauri-apps/api/tauri"
 
 import {useConfigStore} from "../store/config";
 const config = useConfigStore()
-console.log(config.version)
 
 const message = useMessage()
 const props = defineProps(['comic'])
@@ -54,10 +53,12 @@ const src = convertFileSrc(props.comic.cover)
 const emit = defineEmits(['delete'])
 
 async function deleteComic() {
-  // todo 根据config中是否删除源文件 提供不同的文本提示
   await invoke('delete_comic', {id: props.comic.id})
       .then(() => {
         message.success('已删除：' + props.comic.title)
+        if (config.delete_source_file){
+          message.error('文件已被删除')
+        }
       })
       .catch((err) => {
         message.error('删除错误：' + err as string)
@@ -66,12 +67,17 @@ async function deleteComic() {
 }
 
 function testRead() {
-  // todo 根据是否以第三方打开 进行invoke或者router.push
-  message.info('正在用第三方查看器打开：' + props.comic.title)
-  invoke('open_with_third_party', {folder: props.comic.path})
-      .catch((err) => {
-        message.error('打开失败：' + err as string)
-      })
+  if (config.third_party_open){
+    message.info('正在用第三方查看器打开：' + props.comic.title)
+    invoke('open_with_third_party', {folder: props.comic.path})
+        .catch((err) => {
+          message.error('打开失败：' + err as string)
+        })
+  }
+  else {
+    message.error('漫画阅读页面未完成')
+  }
+
 }
 
 function openSourceFolder() {

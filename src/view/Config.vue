@@ -72,7 +72,6 @@
     </n-layout-content>
   </n-layout>
 </template>
-<!--todo 修改config-->
 <script setup lang="ts">
 import {
   NLayout,
