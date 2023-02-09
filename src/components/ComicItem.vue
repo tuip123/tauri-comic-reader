@@ -45,6 +45,8 @@ import {convertFileSrc, invoke} from "@tauri-apps/api/tauri"
 
 
 import {useConfigStore} from "../store/config";
+
+const router = useRouter()
 const config = useConfigStore()
 
 const message = useMessage()
@@ -67,15 +69,15 @@ async function deleteComic() {
 }
 
 function testRead() {
-  if (config.third_party_open){
+  if (!config.third_party_open) {
+    message.error('漫画阅读页面未完成')
+    router.push({path: '/ComicReader', query: {id: props.comic.id}})
+  } else {
     message.info('正在用第三方查看器打开：' + props.comic.title)
     invoke('open_with_third_party', {folder: props.comic.path})
         .catch((err) => {
           message.error('打开失败：' + err as string)
         })
-  }
-  else {
-    message.error('漫画阅读页面未完成')
   }
 
 }

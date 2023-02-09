@@ -134,7 +134,7 @@ function setDeleteFileIsTrue(value: boolean) {
 
 <template>
   <div class="card">
-    <n-input v-model="temp" />
+    <n-input v-model:value="temp" />
     <br>
     <n-button round @click="addLibrary()">addLibrary</n-button>
     <br>
