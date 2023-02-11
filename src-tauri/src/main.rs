@@ -157,7 +157,7 @@ fn add_library(path: &str) -> Result<(), String> {
     insert.bind((1, path)).unwrap();
     let mut library_id = 0;
     while let Ok(State::Row) = insert.next() {
-        library_id = insert.read::<i64,_>(0).unwrap();
+        library_id = insert.read::<i64, _>(0).unwrap();
     }
     // 添加库下漫画记录
     let result = reload_library(library_id);
@@ -183,7 +183,7 @@ fn reload_library(library_id: i64) -> Result<(), String> {
     let mut select = conn.prepare("select root from library where Id = ?").unwrap();
     select.bind((1, library_id)).unwrap();
     let mut root = String::from("");
-    while let Ok(State::Row) = select.next(){
+    while let Ok(State::Row) = select.next() {
         root = select.read::<String, _>(0).unwrap();
     }
     if root == "" {
@@ -254,7 +254,7 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
     };
     select = conn.prepare("select count(1) from library").unwrap();
     while let State::Row = select.next().unwrap() {
-        return_list.pagination.total = select.read::<i64,_>(0).unwrap() as i32;
+        return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
     }
     if search.trim().len() == 0 {
         select = conn.prepare("select Id,root,count from library LIMIT ? OFFSET ?").unwrap();
@@ -268,8 +268,8 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
     }
     while let State::Row = select.next().unwrap() {
         let library: Library = Library {
-            id: select.read::<i64,_>(0).unwrap(),
-            root: select.read::<String,_>(1).unwrap(),
+            id: select.read::<i64, _>(0).unwrap(),
+            root: select.read::<String, _>(1).unwrap(),
         };
         return_list.list.push(library);
     }
@@ -288,7 +288,7 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
     select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
     select.bind((1, library_id)).unwrap();
     while let State::Row = select.next().unwrap() {
-        return_list.pagination.total = select.read::<i64,_>(0).unwrap() as i32;
+        return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
     }
     if search.trim().len() == 0 {
         select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? LIMIT ? OFFSET ?").unwrap();
@@ -304,16 +304,36 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
     }
     while let State::Row = select.next().unwrap() {
         let comic: Comic = Comic {
-            id: select.read::<i64,_>(0).unwrap(),
-            path: select.read::<String,_>(1).unwrap(),
-            title: select.read::<String,_>(2).unwrap(),
-            cover: select.read::<String,_>(3).unwrap(),
-            count: select.read::<i64,_>(4).unwrap(),
+            id: select.read::<i64, _>(0).unwrap(),
+            path: select.read::<String, _>(1).unwrap(),
+            title: select.read::<String, _>(2).unwrap(),
+            cover: select.read::<String, _>(3).unwrap(),
+            count: select.read::<i64, _>(4).unwrap(),
             library_id,
         };
         return_list.list.push(comic);
     }
     Ok(return_list)
+}
+
+#[tauri::command]
+fn query_comic_name(library_id: i64) -> Result<Vec<Comic>, String> {
+    let conn = get_conn().unwrap();
+    let mut select = conn.prepare("select Id,title from comic where libraryId = ?").unwrap();
+    select.bind((1, library_id)).unwrap();
+    let mut title_list: Vec<Comic> = Vec::new();
+    while let State::Row = select.next().unwrap() {
+        let comic: Comic = Comic {
+            id: select.read::<i64, _>(0).unwrap(),
+            path: "".to_string(),
+            title: select.read::<String, _>(1).unwrap(),
+            cover: "".to_string(),
+            count: 0,
+            library_id,
+        };
+        title_list.push(comic);
+    };
+    Ok(title_list)
 }
 
 // 配置相关
@@ -348,8 +368,8 @@ fn get_config() -> Result<HashSet<Config>, String> {
     let mut set: HashSet<Config> = HashSet::new();
     while let State::Row = select.next().unwrap() {
         let mut config: Config = Config { key: "".to_string(), value: "".to_string() };
-        config.key = select.read::<String,_>(0).unwrap();
-        config.value = select.read::<String,_>(1).unwrap();
+        config.key = select.read::<String, _>(0).unwrap();
+        config.value = select.read::<String, _>(1).unwrap();
         set.insert(config);
     }
     Ok(set)
@@ -363,7 +383,7 @@ fn delete_comic(id: i64) {
     let mut select = conn.prepare("select value from config where key = 'delete_source_file'").unwrap();
     let mut delete_source_file = false;
     while let State::Row = select.next().unwrap() {
-        let temp = select.read::<String,_>(0).unwrap();
+        let temp = select.read::<String, _>(0).unwrap();
         if temp == "true" {
             delete_source_file = true;
         }
@@ -374,7 +394,7 @@ fn delete_comic(id: i64) {
         select.bind((1, id)).unwrap();
         let mut path = String::from("");
         while let State::Row = select.next().unwrap() {
-            path = select.read::<String,_>(0).unwrap();
+            path = select.read::<String, _>(0).unwrap();
         }
         fs::remove_dir_all(path).unwrap();
     }
@@ -383,7 +403,7 @@ fn delete_comic(id: i64) {
     select.bind((1, id)).unwrap();
     let mut library_id = 0;
     while let State::Row = select.next().unwrap() {
-        library_id = select.read::<i64,_>(0).unwrap();
+        library_id = select.read::<i64, _>(0).unwrap();
     }
     // 执行删除表记录
     let mut delete = conn.prepare("delete from comic where id = ?").unwrap();
@@ -394,7 +414,7 @@ fn delete_comic(id: i64) {
     select.bind((1, library_id)).unwrap();
     let mut count = 0;
     while let State::Row = select.next().unwrap() {
-        count = select.read::<i64,_>(0).unwrap();
+        count = select.read::<i64, _>(0).unwrap();
     }
     let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
     update.bind((1, count)).unwrap();
@@ -435,7 +455,7 @@ fn open_with_third_party(folder: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn read_comic(id: i64) -> Result<ComicRead, String> {
+fn read_comic(id: i64) -> Result<Vec<String>, String> {
     let mut comic_read: ComicRead = ComicRead {
         page: vec![]
     };
@@ -444,7 +464,7 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
     select.bind((1, id)).unwrap();
     let mut path = String::from("");
     while let State::Row = select.next().unwrap() {
-        path = select.read::<String,_>(0).unwrap();
+        path = select.read::<String, _>(0).unwrap();
     }
     if path == "" {
         return Err(String::from("路径不存在"));
@@ -458,7 +478,7 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
             comic_read.page.push(str);
         }
     }
-    Ok(comic_read)
+    Ok(comic_read.page)
 }
 
 #[tauri::command]
@@ -485,6 +505,7 @@ fn main() {
             open_source_folder,
             query_library,
             query_comic,
+            query_comic_name,
             delete_comic,
             delete_library,
             read_comic

@@ -2,7 +2,7 @@
   <n-card :bordered="false" content-style="padding:0 10px 20px 10px">
     <template #cover>
       <!--      <img src="https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg" alt=""  @click="testRead" >-->
-      <img :src="src" alt="" @click="testRead">
+      <img :src="src" alt="" @click="read">
     </template>
     <n-thing>
 
@@ -66,11 +66,9 @@ async function deleteComic() {
   emit('delete')
 }
 
-function testRead() {
+function read() {
   if (!config.third_party_open) {
-    message.error('漫画阅读页面未完成')
-    console.log(router)
-    router.push({path: '/ComicReader', query: {id: props.comic.id}})
+    router.push({path: '/ComicReader', query: {id: props.comic.id,libraryId:props.comic.library_id}})
   } else {
     message.info('正在用第三方查看器打开：' + props.comic.title)
     invoke('open_with_third_party', {folder: props.comic.path})

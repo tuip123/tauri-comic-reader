@@ -12,10 +12,10 @@
             show-trigger="arrow-circle"
             :width="240"
             :collapsed-width="0"
-            content-style="padding:24px"
             bordered
         >
           <div>
+            <div style="padding: 24px 24px 0;">
               <n-form
                   label-placement="left"
                   label-width="auto"
@@ -30,7 +30,26 @@
                   </n-input-number>
                 </n-form-item>
               </n-form>
-            <div style="height: 500vh">left</div>
+            </div>
+            <div>
+              <n-card v-for="(comic,index) of libraryComics" content-style="padding:12px" @click="changeComic(comic.id)" >
+                <div v-if="comic.id === comicId">
+                  todo height light here
+                </div>
+                <n-space justify="end" :wrap="false">
+                  <n-ellipsis line-clamp="2">
+                    {{ comic.title }}
+                  </n-ellipsis>
+                  <n-button size="tiny" quaternary circle type="error" @click.stop="deleteComic(index)">
+                    <template #icon>
+                      <n-icon>
+                        <trash-sharp/>
+                      </n-icon>
+                    </template>
+                  </n-button>
+                </n-space>
+              </n-card>
+            </div>
           </div>
         </n-layout-sider>
         <!--中区图片区-->
@@ -44,7 +63,7 @@
               </template>
             </n-button>
           </div>
-          <div v-for="comic of comicList" style="margin: auto;" :style="'width:'+comicWidth+'%'" :key="'center_'+comic">
+          <div v-for="comic of comicPage" style="margin: auto;" :style="'width:'+comicWidth+'%'">
             <img style="width: 100%;" :src="comic" ref="comic" alt=""/>
           </div>
         </n-layout-content>
@@ -58,13 +77,18 @@
         show-trigger="arrow-circle"
         :width="240"
         :collapsed-width="120"
-        content-style="padding:24px"
         bordered>
-      <n-grid :cols="1">
-        <n-gi v-for="(comic,i) of comicList" :key="'right_'+comic">
-          <img style="width: 100%;" :src="comic" @click="turnPage(i)" alt=""/>
-        </n-gi>
-      </n-grid>
+      <n-scrollbar style="height: calc(90vh);">
+        <div style="padding:0 12px">
+          <div v-for="(comic,i) of comicPage" :key="'right_'+comic">
+            <img style="width: 100%;" :src="comic" @click="turnPage(i)" alt=""/>
+          </div>
+        </div>
+      </n-scrollbar>
+      <div>
+        todo set a progress bar here
+      </div>
+
     </n-layout-sider>
 
   </n-layout>
@@ -77,23 +101,39 @@ import {
   NInputNumber,
   NForm,
   NFormItem,
+  NScrollbar,
   NLayout,
   NLayoutContent,
   NLayoutSider,
-  NGrid,
-  NGi,
+  NEllipsis,
+  NCard,
+  NSpace,
   useMessage
 } from 'naive-ui'
-import {ChevronBack} from "@vicons/ionicons5";
+import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {invoke, convertFileSrc} from "@tauri-apps/api/tauri";
 import {onMounted, ref} from "vue";
+import {useConfigStore} from "@/store/config";
+const config = useConfigStore()
 
 const router = useRouter()
 const route = useRoute()
 const message = useMessage()
 
-const comicList = ref<string[]>([])
+
+interface Comic {
+  id: number,
+  count: number,
+  library_id: number,
+  cover: string,
+  path: string,
+  title: string,
+}
+
+const libraryComics = ref<Comic[]>([])
+const comicPage = ref<string[]>([])
+const comicId = ref(0)
 const comic = ref()
 const center = ref()
 const comicWidth = ref(40)
@@ -107,12 +147,44 @@ function turnPage(i: number) {
   center.value.scrollTo({top: scrollTop, behavior: 'smooth'})
 }
 
-async function initData(id:number) {
+async function changeComic(id: number) {
+  comicId.value = id
+  await initData()
+}
+
+async function deleteComic(index:number){
+  let flag = false
+  if (libraryComics.value[index].id === comicId.value){
+    flag = true
+  }
+  await invoke('delete_comic', {id:libraryComics.value[index].id})
+      .then(() => {
+        message.success('已删除：' + libraryComics.value[index].title)
+        if (config.delete_source_file){
+          message.error('文件已被删除')
+        }
+      })
+      .catch((err) => {
+        message.error('删除错误：' + err as string)
+      })
+
+  libraryComics.value.splice(index,1)
+  if (flag){
+    comicPage.value = []
+    if (libraryComics.value.length>0){
+      let targetIndex = index>=libraryComics.value.length?index-1:index
+      comicId.value = libraryComics.value[targetIndex].id
+      await initData()
+    }
+  }
+}
+
+async function initData() {
+  comicPage.value = []
   try {
-    let res = <any>await invoke('read_comic', {id})
-    let fileList: string[] = res.page
-    fileList.forEach((e) => {
-      comicList.value.push(convertFileSrc(e))
+    let res = <string[]>await invoke('read_comic', {id:comicId.value})
+    res.forEach((e) => {
+      comicPage.value.push(convertFileSrc(e))
     })
   } catch (e) {
     router.go(-1)
@@ -120,8 +192,15 @@ async function initData(id:number) {
   }
 }
 
+async function initLibrary(libraryId: number) {
+  libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId})
+}
+
 onMounted(async () => {
-  await initData(Number(route.query.id))
+  comicId.value = Number(route.query.id)
+  await initData()
+  await initLibrary(Number(route.query.libraryId))
+
 })
 
 
