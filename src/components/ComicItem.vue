@@ -69,6 +69,7 @@ async function deleteComic() {
 function testRead() {
   if (!config.third_party_open) {
     message.error('漫画阅读页面未完成')
+    console.log(router)
     router.push({path: '/ComicReader', query: {id: props.comic.id}})
   } else {
     message.info('正在用第三方查看器打开：' + props.comic.title)

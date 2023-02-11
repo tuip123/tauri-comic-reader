@@ -7,60 +7,64 @@
         <!--左侧侧边栏-->
         <n-layout-sider
             collapse-mode="width"
-            bordered
-            :default-collapsed="true"
-            :collapsed-width="34"
+            :default-collapsed="false"
+            :native-scrollbar="false"
             show-trigger="arrow-circle"
-            :on-update:collapsed="afterCollapsedLeave"
-            :on-after-enter="afterCollapsedEnter"
+            :width="240"
+            :collapsed-width="0"
+            content-style="padding:24px"
+            bordered
         >
           <div>
-            <div>
-              <n-space justify="left">
-                <n-button strong secondary circle @click="back">
-                  <template #icon>
-                    <n-icon>
-                      <chevron-back/>
-                    </n-icon>
-                  </template>
-                </n-button>
-                <div v-if="headShow">
-                  <n-input></n-input>
-                </div>
-                <n-button v-if="headShow" strong secondary circle @click="toConfig">
-                  <template #icon>
-                    <n-icon>
-                      <options-outline/>
-                    </n-icon>
-                  </template>
-                </n-button>
-              </n-space>
-            </div>
-            <n-scrollbar>
-              <div>left</div>
-            </n-scrollbar>
+              <n-form
+                  label-placement="left"
+                  label-width="auto"
+                  size="small"
+              >
+                <n-form-item label="画面比例：">
+                  <n-input-number button-placement="right" :max="100" :min="30" :step="10"
+                                  v-model:value="comicWidth">
+                    <template #suffix>
+                      %
+                    </template>
+                  </n-input-number>
+                </n-form-item>
+              </n-form>
+            <div style="height: 500vh">left</div>
           </div>
         </n-layout-sider>
         <!--中区图片区-->
-        <n-layout-content :native-scrollbar="false">
-          <n-grid :cols="2" x-gap="24" y-gap="24">
-            <n-gi v-for="comic of comicList">
-              <img style="width: 100%;" v-lazy="comic"/>
-            </n-gi>
-          </n-grid>
+        <n-layout-content :native-scrollbar="false" ref="center">
+          <div class="top-hover-area">
+            <n-button text class="back-button" @click="back">
+              <template #icon>
+                <n-icon size="30">
+                  <ChevronBack/>
+                </n-icon>
+              </template>
+            </n-button>
+          </div>
+          <div v-for="comic of comicList" style="margin: auto;" :style="'width:'+comicWidth+'%'" :key="'center_'+comic">
+            <img style="width: 100%;" :src="comic" ref="comic" alt=""/>
+          </div>
         </n-layout-content>
       </n-layout>
     </n-layout-content>
     <!--右侧侧边栏-->
     <n-layout-sider
-        collapse-mode="transform"
-        :default-collapsed="true"
+        collapse-mode="width"
+        :default-collapsed="false"
+        :native-scrollbar="false"
         show-trigger="arrow-circle"
-        content-style="padding: 24px;"
+        :width="240"
+        :collapsed-width="120"
+        content-style="padding:24px"
         bordered>
-      <div>
-        right
-      </div>
+      <n-grid :cols="1">
+        <n-gi v-for="(comic,i) of comicList" :key="'right_'+comic">
+          <img style="width: 100%;" :src="comic" @click="turnPage(i)" alt=""/>
+        </n-gi>
+      </n-grid>
     </n-layout-sider>
 
   </n-layout>
@@ -70,18 +74,17 @@
 import {
   NButton,
   NIcon,
-  NScrollbar,
-  NInput,
-  NSpace,
+  NInputNumber,
+  NForm,
+  NFormItem,
   NLayout,
   NLayoutContent,
   NLayoutSider,
   NGrid,
   NGi,
-  NImage,
   useMessage
 } from 'naive-ui'
-import {ChevronBack, OptionsOutline} from "@vicons/ionicons5";
+import {ChevronBack} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {invoke, convertFileSrc} from "@tauri-apps/api/tauri";
 import {onMounted, ref} from "vue";
@@ -91,30 +94,22 @@ const route = useRoute()
 const message = useMessage()
 
 const comicList = ref<string[]>([])
+const comic = ref()
+const center = ref()
+const comicWidth = ref(40)
 
 function back() {
   router.go(-1)
 }
 
-function toConfig() {
-  router.push('/Config')
+function turnPage(i: number) {
+  let scrollTop = comic.value[i].offsetTop
+  center.value.scrollTo({top: scrollTop, behavior: 'smooth'})
 }
 
-const headShow = ref(false)
-
-function afterCollapsedLeave(collapsed: boolean) {
-  if (collapsed) {
-    headShow.value = !collapsed
-  }
-}
-
-function afterCollapsedEnter() {
-  headShow.value = true
-}
-
-onMounted(async () => {
+async function initData(id:number) {
   try {
-    let res = <any>await invoke('read_comic', {id: Number(route.query.id)})
+    let res = <any>await invoke('read_comic', {id})
     let fileList: string[] = res.page
     fileList.forEach((e) => {
       comicList.value.push(convertFileSrc(e))
@@ -123,10 +118,29 @@ onMounted(async () => {
     router.go(-1)
     message.error('文件无法打开')
   }
+}
+
+onMounted(async () => {
+  await initData(Number(route.query.id))
 })
+
 
 </script>
 
 <style scoped>
+.top-hover-area {
+  height: 60px;
+  width: 60px;
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+}
 
+.back-button {
+  margin-left: 20px;
+  transition: visibility 0s, opacity 0.1s linear;
+  -webkit-transition: visibility 0s, opacity 0.1s linear; /* Safari */
+}
 </style>
