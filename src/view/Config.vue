@@ -124,9 +124,12 @@ async function setPath() {
       }]
     }) as string | unknown;
     if (selected !== null) {
-      await invoke("update_config", {key: 'third_party_image_viewer', value: selected})
-      message.success('设置成功')
-      await getConfig()
+      invoke("update_config", {key: 'third_party_image_viewer', value: selected}).then(async (res) => {
+        message.success(res as string)
+        await getConfig()
+      }).catch((err)=>{
+        message.error(err)
+      })
     }
   }
 }

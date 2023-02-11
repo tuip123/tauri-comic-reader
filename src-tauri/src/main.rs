@@ -338,13 +338,13 @@ fn query_comic_name(library_id: i64) -> Result<Vec<Comic>, String> {
 
 // 配置相关
 #[tauri::command]
-fn add_third_party_image_viewer(path: &str) -> Result<(), String> {
+fn add_third_party_image_viewer(path: &str) -> Result<String, String> {
     if cfg!(target_os = "windows") {
         let conn = get_conn().unwrap();
         let mut update = conn.prepare("update config set value = ? where key = 'third_party_image_viewer'").unwrap();
         update.bind((1, path)).unwrap();
         update.next().unwrap();
-        Ok(())
+        Ok(String::from("设置成功"))
     } else {
         Err(String::from("不支持当前系统"))
     }
