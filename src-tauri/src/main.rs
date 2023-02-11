@@ -452,8 +452,11 @@ fn read_comic(id: i64) -> Result<ComicRead, String> {
     let paths = fs::read_dir(path).unwrap();
     for p in paths {
         let str = String::from(p.unwrap().path().to_str().unwrap());
-        println!("{}", str);
-        comic_read.page.push(str);
+        let file_split: Vec<&str> = str.split(".").collect();
+        if file_split[file_split.len() - 1] == "jpg"
+        {
+            comic_read.page.push(str);
+        }
     }
     Ok(comic_read)
 }

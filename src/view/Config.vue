@@ -87,7 +87,7 @@ import {
 } from "naive-ui"
 import Header from "@/components/Header.vue";
 import Test from "@/components/Test.vue";
-import {useConfigStore, getConfig,Config} from "../store/config";
+import {useConfigStore, getConfig,Config} from "@/store/config";
 import {CSSProperties, ref} from 'vue'
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from "@tauri-apps/api/dialog";

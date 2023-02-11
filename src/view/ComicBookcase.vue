@@ -80,7 +80,6 @@ const searchWord = ref("")
 
 function setSearchWord(word: string) {
   searchWord.value = word
-  console.log(searchWord.value)
   queryComic()
 }
 
