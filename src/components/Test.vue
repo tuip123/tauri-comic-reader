@@ -54,7 +54,7 @@ async function addLibrary() {
   }
 }
 
-const temp = ref(1)
+const temp = ref()
 
 async function reloadLibrary() {
   try {

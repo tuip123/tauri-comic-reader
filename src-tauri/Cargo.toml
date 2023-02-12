@@ -1,6 +1,6 @@
 [package]
 name = "tauri-comic-reader"
-version = "0.0.1"
+version = "0.0.2"
 description = "A Comic Reader Base On Tauri App"
 authors = ["you"]
 license = ""
