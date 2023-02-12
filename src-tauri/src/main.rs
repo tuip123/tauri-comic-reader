@@ -300,10 +300,20 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
         list: vec![],
         pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
     };
-    select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
-    select.bind((1, library_id)).unwrap();
-    while let State::Row = select.next().unwrap() {
-        return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
+    if search.trim().len() == 0 {
+        select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
+        select.bind((1, library_id)).unwrap();
+        while let State::Row = select.next().unwrap() {
+            return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
+        }
+    }
+    else{
+        select = conn.prepare("select count(1) from comic where libraryId = ? and title LIKE ?").unwrap();
+        select.bind((1, library_id)).unwrap();
+        select.bind((2, &*String::from(format!("%{}%", search.trim())))).unwrap();
+        while let State::Row = select.next().unwrap() {
+            return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
+        }
     }
     if search.trim().len() == 0 {
         select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? LIMIT ? OFFSET ?").unwrap();
