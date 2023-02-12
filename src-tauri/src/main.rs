@@ -138,7 +138,22 @@ fn init_db() {
         conn.execute(query).unwrap();
     }
 }
-
+fn update_app(){
+    let conn = get_conn().unwrap();
+    let mut select = conn.prepare("select value from config where key = 'version'").unwrap();
+    let mut update:Statement;
+    let mut version:String=String::from("");
+    while let Ok(State::Row) = select.next() {
+        version = select.read::<String,_>(0).unwrap();
+    }
+    match version.as_str() {
+        "0.0.1"=>{
+            update=conn.prepare("update config set value = '0.0.2' where key = 'version' ").unwrap();
+            update.next().unwrap();
+        }
+        _=>{}
+    }
+}
 // 库相关
 #[tauri::command]
 fn add_library(path: &str) -> Result<(), String> {
@@ -494,6 +509,7 @@ fn open_source_folder(folder: &str) -> Result<(), String> {
 
 fn main() {
     init_db();
+    update_app();
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             add_library,
