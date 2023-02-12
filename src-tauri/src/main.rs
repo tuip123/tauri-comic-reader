@@ -148,7 +148,11 @@ fn update_app(){
     }
     match version.as_str() {
         "0.0.1"=>{
-            update=conn.prepare("update config set value = '0.0.2' where key = 'version' ").unwrap();
+            update=conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
+            update.next().unwrap();
+        }
+        "0.0.2"=>{
+            update=conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
             update.next().unwrap();
         }
         _=>{}
