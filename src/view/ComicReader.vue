@@ -32,23 +32,22 @@
               </n-form>
             </div>
             <div>
-              <n-card v-for="(comic,index) of libraryComics" content-style="padding:12px" @click="changeComic(comic.id)" >
-                <div v-if="comic.id === comicId">
-                  todo height light here
-                </div>
-                <n-space justify="end" :wrap="false">
-                  <n-ellipsis line-clamp="2">
-                    {{ comic.title }}
-                  </n-ellipsis>
-                  <n-button size="tiny" quaternary circle type="error" @click.stop="deleteComic(index)">
-                    <template #icon>
-                      <n-icon>
-                        <trash-sharp/>
-                      </n-icon>
-                    </template>
-                  </n-button>
-                </n-space>
-              </n-card>
+              <n-config-provider v-for="(comic,index) of libraryComics" :theme="comic.id === comicId?null:darkTheme">
+                <n-card content-style="padding:4px" @click="changeComic(comic.id)" >
+                  <n-space justify="space-between" :wrap="false">
+                    <n-ellipsis line-clamp="2" style="height: 40px">
+                      {{ comic.title }}
+                    </n-ellipsis>
+                    <n-button size="tiny" quaternary circle type="error" @click.stop="deleteComic(index)">
+                      <template #icon>
+                        <n-icon>
+                          <trash-sharp/>
+                        </n-icon>
+                      </template>
+                    </n-button>
+                  </n-space>
+                </n-card>
+              </n-config-provider>
             </div>
           </div>
         </n-layout-sider>
@@ -78,17 +77,13 @@
         :width="240"
         :collapsed-width="120"
         bordered>
-      <n-scrollbar style="height: calc(90vh);">
+      <n-scrollbar>
         <div style="padding:0 12px">
           <div v-for="(comic,i) of comicPage" :key="'right_'+comic">
             <img style="width: 100%;" :src="comic" @click="turnPage(i)" alt=""/>
           </div>
         </div>
       </n-scrollbar>
-      <div>
-        todo set a progress bar here
-      </div>
-
     </n-layout-sider>
 
   </n-layout>
@@ -108,6 +103,8 @@ import {
   NEllipsis,
   NCard,
   NSpace,
+  NConfigProvider,
+  darkTheme,
   useMessage
 } from 'naive-ui'
 import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
