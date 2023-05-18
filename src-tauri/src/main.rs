@@ -138,26 +138,38 @@ fn init_db() {
         conn.execute(query).unwrap();
     }
 }
-fn update_app(){
+
+fn update_app() {
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version'").unwrap();
-    let mut update:Statement;
-    let mut version:String=String::from("");
+    let mut update: Statement;
+    let mut version: String = String::from("");
     while let Ok(State::Row) = select.next() {
-        version = select.read::<String,_>(0).unwrap();
+        version = select.read::<String, _>(0).unwrap();
     }
     match version.as_str() {
-        "0.0.1"=>{
-            update=conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
+        "0.0.1" => {
+            update = conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
             update.next().unwrap();
         }
-        "0.0.2"=>{
-            update=conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
+        "0.0.2" => {
+            update = conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
             update.next().unwrap();
         }
-        _=>{}
+        _ => {}
     }
 }
+
+fn has_extension(exten: &str, extensions: &[String]) -> bool{
+    for e in extensions {
+        if exten == e
+        {
+            return true;
+        }
+    }
+    false
+}
+
 // 库相关
 #[tauri::command]
 fn add_library(path: &str) -> Result<(), String> {
@@ -233,7 +245,9 @@ fn reload_library(library_id: i64) -> Result<(), String> {
             let file_name = file.unwrap().file_name();
             let file_name_clone = file_name.clone();
             let file_split: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
-            if file_split[file_split.len() - 1] == "jpg"
+            let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
+            let extend_name = lc_extend_name.trim();
+            if has_extension(extend_name, &[String::from("png"),String::from("jpg"), String::from("jpeg")])
             {
                 if cover_temp == true {
                     comic_cover_str = format!("{}\\{}", comic_cover_str, file_name_clone.to_str().unwrap());
@@ -310,8 +324,7 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
         while let State::Row = select.next().unwrap() {
             return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
         }
-    }
-    else{
+    } else {
         select = conn.prepare("select count(1) from comic where libraryId = ? and title LIKE ?").unwrap();
         select.bind((1, library_id)).unwrap();
         select.bind((2, &*String::from(format!("%{}%", search.trim())))).unwrap();
@@ -502,7 +515,9 @@ fn read_comic(id: i64) -> Result<Vec<String>, String> {
     for p in paths {
         let str = String::from(p.unwrap().path().to_str().unwrap());
         let file_split: Vec<&str> = str.split(".").collect();
-        if file_split[file_split.len() - 1] == "jpg"
+        let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
+        let extend_name = lc_extend_name.trim();
+        if has_extension(extend_name, &[String::from("png"),String::from("jpg"), String::from("jpeg")])
         {
             comic_read.page.push(str);
         }

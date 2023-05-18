@@ -1,8 +1,8 @@
 [package]
 name = "tauri-comic-reader"
-version = "0.1.0"
+version = "0.1.0-HOTFIX"
 description = "A Comic Reader Base On Tauri App"
-authors = ["you"]
+authors = ["tuip123"]
 license = ""
 repository = ""
 edition = "2021"
