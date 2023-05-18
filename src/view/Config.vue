@@ -27,6 +27,19 @@
             <n-grid :cols="6" style="padding-bottom: 12px">
               <n-gi>
                 <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
+                  <n-switch :value="config.minimize_window" @update:value="minimizeWindow">
+                    <template #checked>
+                      开启中键最小化
+                    </template>
+                    <template #unchecked>
+                      停用中键最小化
+                    </template>
+                  </n-switch>
+                </div>
+              </n-gi>
+
+              <n-gi>
+                <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
                   <n-switch :value="config.third_party_open" @update:value="thirdPartyOpenSetting">
                     <template #checked>
                       使用第三方阅读
@@ -37,6 +50,7 @@
                   </n-switch>
                 </div>
               </n-gi>
+
               <n-gi>
                 <div style="text-align: center;height: 100%;display: flex;justify-content: center;align-items: center;">
                   <n-switch :value="config.delete_source_file" @update:value="deleteSourceFileSetting"
@@ -50,6 +64,7 @@
                   </n-switch>
                 </div>
               </n-gi>
+
             </n-grid>
             <n-grid :cols="12">
               <n-gi span="2">
@@ -74,20 +89,21 @@
 </template>
 <script setup lang="ts">
 import {
-  NLayout,
-  NLayoutHeader,
-  NLayoutContent,
   NCard,
-  NInput,
-  NGrid,
+  NDivider,
   NGi,
+  NGrid,
+  NInput,
+  NLayout,
+  NLayoutContent,
+  NLayoutHeader,
   NSwitch,
   NThing,
-  NDivider, useMessage
+  useMessage
 } from "naive-ui"
 import Header from "@/components/Header.vue";
 import Test from "@/components/Test.vue";
-import {useConfigStore, getConfig,Config} from "@/store/config";
+import {Config, getConfig, useConfigStore} from "@/store/config";
 import {CSSProperties, ref} from 'vue'
 import {invoke} from "@tauri-apps/api/tauri";
 import {open} from "@tauri-apps/api/dialog";
@@ -172,6 +188,18 @@ async function deleteSourceFileSetting() {
     message.info('已关闭删除源文件功能')
   }
 }
+
+async function minimizeWindow() {
+  console.log(config['minimize_window'])
+  await invoke("update_config", {key: 'minimize_window', value: config['minimize_window'] ? 'false' : 'true'})
+  await getConfig()
+  if (config.minimize_window) {
+    message.info('已开启最小化窗口')
+  } else {
+    message.info('已关闭最小化窗口')
+  }
+}
+
 </script>
 
 <style scoped>

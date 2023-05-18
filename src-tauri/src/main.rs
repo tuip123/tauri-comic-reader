@@ -3,16 +3,18 @@ all(not(debug_assertions), target_os = "windows"),
 windows_subsystem = "windows"
 )]
 
-use std::collections::{HashSet};
-use std::process::Command;
-use std::fs::metadata;
-use sqlite::State;
-use sqlite::{Connection, Statement};
-use std::fs::{create_dir_all};
-use std::path::Path;
-use tauri::api::path::app_local_data_dir;
+use std::collections::HashSet;
+use std::fs::create_dir_all;
 use std::fs;
+use std::fs::metadata;
+use std::path::Path;
+use std::process::Command;
+
+use enigo::*;
 use serde_with::serde_as;
+use sqlite::{Connection, Statement};
+use sqlite::State;
+use tauri::api::path::app_local_data_dir;
 
 #[serde_as]
 #[derive(serde::Serialize)]
@@ -140,6 +142,8 @@ fn init_db() {
 }
 
 fn update_app() {
+    let now_version = "0.1.1";
+
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version'").unwrap();
     let mut update: Statement;
@@ -147,20 +151,16 @@ fn update_app() {
     while let Ok(State::Row) = select.next() {
         version = select.read::<String, _>(0).unwrap();
     }
-    match version.as_str() {
-        "0.0.1" => {
-            update = conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
-            update.next().unwrap();
-        }
-        "0.0.2" => {
-            update = conn.prepare("update config set value = '0.1.0' where key = 'version' ").unwrap();
-            update.next().unwrap();
-        }
-        _ => {}
+    if version.as_str() != now_version {
+        update = conn.prepare("update config set value = ? where key = 'version' ").unwrap();
+        update.bind((1, now_version)).unwrap();
+        update.next().unwrap();
+        let insert = "insert into config (key,value) values ('minimize_window','false') ";
+        conn.execute(insert).unwrap();
     }
 }
 
-fn has_extension(exten: &str, extensions: &[String]) -> bool{
+fn has_extension(exten: &str, extensions: &[String]) -> bool {
     for e in extensions {
         if exten == e
         {
@@ -247,7 +247,7 @@ fn reload_library(library_id: i64) -> Result<(), String> {
             let file_split: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
             let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
             let extend_name = lc_extend_name.trim();
-            if has_extension(extend_name, &[String::from("png"),String::from("jpg"), String::from("jpeg")])
+            if has_extension(extend_name, &[String::from("png"), String::from("jpg"), String::from("jpeg")])
             {
                 if cover_temp == true {
                     comic_cover_str = format!("{}\\{}", comic_cover_str, file_name_clone.to_str().unwrap());
@@ -395,11 +395,31 @@ fn add_third_party_image_viewer(path: &str) -> Result<String, String> {
 #[tauri::command]
 fn update_config(key: &str, value: &str) -> Result<(), String> {
     let conn = get_conn().unwrap();
-    let mut update = conn.prepare("update config set value = ? where key = ?").unwrap();
-    update.bind((1, value)).unwrap();
-    update.bind((2, key)).unwrap();
-    update.next().unwrap();
-    Ok(())
+    let mut select = conn.prepare("select count(1) from config where key = ?").unwrap();
+    select.bind((1, key)).unwrap();
+    let mut count = 0;
+    while let State::Row = select.next().unwrap() {
+        count = select.read::<i64, _>(0).unwrap();
+    }
+    if count == 0 {
+        println!("{}", key);
+        println!("{}", value);
+        let mut insert = conn.prepare("insert into config (key,value) values (?,?) ").unwrap();
+        println!("123");
+        insert.bind((1, key)).unwrap();
+        println!("123");
+        insert.bind((2, value)).unwrap();
+        println!("123");
+        insert.next().unwrap();
+        println!("123");
+        Ok(())
+    } else {
+        let mut update = conn.prepare("update config set value = ? where key = ?").unwrap();
+        update.bind((1, value)).unwrap();
+        update.bind((2, key)).unwrap();
+        update.next().unwrap();
+        Ok(())
+    }
 }
 
 
@@ -517,7 +537,7 @@ fn read_comic(id: i64) -> Result<Vec<String>, String> {
         let file_split: Vec<&str> = str.split(".").collect();
         let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
         let extend_name = lc_extend_name.trim();
-        if has_extension(extend_name, &[String::from("png"),String::from("jpg"), String::from("jpeg")])
+        if has_extension(extend_name, &[String::from("png"), String::from("jpg"), String::from("jpeg")])
         {
             comic_read.page.push(str);
         }
@@ -534,6 +554,23 @@ fn open_source_folder(folder: &str) -> Result<(), String> {
     } else {
         Err(String::from("不支持当前系统"))
     }
+}
+
+#[tauri::command]
+fn minimize_window() {
+    let conn = get_conn().unwrap();
+    let mut select = conn.prepare("select value from config where key = 'minimize_window'").unwrap();
+    while let State::Row = select.next().unwrap() {
+        let temp = select.read::<String, _>(0).unwrap();
+        if temp == "false" {
+            return;
+        }
+    };
+
+    let mut enigo = Enigo::new();
+    enigo.key_down(Key::Alt);
+    enigo.key_click(Key::Escape);
+    enigo.key_up(Key::Alt);
 }
 
 fn main() {
@@ -553,7 +590,8 @@ fn main() {
             query_comic_name,
             delete_comic,
             delete_library,
-            read_comic
+            read_comic,
+            minimize_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

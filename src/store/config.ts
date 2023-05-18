@@ -6,7 +6,8 @@ export const useConfigStore = defineStore('counter', {
         version: "",
         third_party_image_viewer: "",
         third_party_open: false,
-        delete_source_file: false
+        delete_source_file: false,
+        minimize_window: false
     } as Config),
 })
 
@@ -15,6 +16,7 @@ export interface Config {
     third_party_image_viewer: string,
     third_party_open: boolean,
     delete_source_file: boolean,
+    minimize_window: boolean,
 
     [key: string]: any
 }
@@ -36,6 +38,9 @@ export async function getConfig() {
             config.delete_source_file = re.value === 'true'
         } else if (re.key === 'third_party_image_viewer') {
             config.third_party_image_viewer = <string>re.value === 'null' ? '未设置' : re.value;
+        } else if (re.key === 'minimize_window') {
+            config.minimize_window = re.value === 'true';
+            console.log(config.minimize_window)
         } else {
             config[re.key] = re.value
         }

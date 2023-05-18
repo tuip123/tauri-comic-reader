@@ -1,5 +1,5 @@
 <template>
-  <n-layout vertical size="large">
+  <n-layout vertical size="large" @mousedown.stop="mouseEvent">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord"/>
     </n-layout-header>
@@ -31,21 +31,22 @@
 </template>
 <script setup lang="ts">
 import {
-  NLayout,
-  NLayoutHeader,
-  NLayoutContent,
-  NLayoutFooter,
-  NSpace,
-  NPagination,
   NGrid,
   NGridItem,
-  NScrollbar
+  NLayout,
+  NLayoutContent,
+  NLayoutFooter,
+  NLayoutHeader,
+  NPagination,
+  NScrollbar,
+  NSpace
 } from "naive-ui"
 import Header from "@/components/Header.vue";
 import ComicItem from "@/components/ComicItem.vue";
 import {useRoute} from "vue-router";
-import {ref, onMounted} from "vue";
+import {onMounted, ref} from "vue";
 import {invoke} from "@tauri-apps/api/tauri";
+
 interface Pagination {
   current: number,
   size: number,
@@ -103,6 +104,10 @@ async function pageChange(num: number) {
 async function sizeChange(num: number) {
   pagination.value.size = num
   await queryComic()
+}
+
+function mouseEvent(event: any) {
+  console.log(event.button)
 }
 
 onMounted(async () => {
