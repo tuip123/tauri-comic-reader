@@ -4,8 +4,8 @@ windows_subsystem = "windows"
 )]
 
 use std::collections::HashSet;
-use std::fs::create_dir_all;
 use std::fs;
+use std::fs::create_dir_all;
 use std::fs::metadata;
 use std::path::Path;
 use std::process::Command;
@@ -557,20 +557,16 @@ fn open_source_folder(folder: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn minimize_window() {
+fn minimize_window() -> bool {
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'minimize_window'").unwrap();
     while let State::Row = select.next().unwrap() {
         let temp = select.read::<String, _>(0).unwrap();
-        if temp == "false" {
-            return;
+        if temp == "true" {
+            return true;
         }
     };
-
-    let mut enigo = Enigo::new();
-    enigo.key_down(Key::Alt);
-    enigo.key_click(Key::Escape);
-    enigo.key_up(Key::Alt);
+    return false;
 }
 
 fn main() {

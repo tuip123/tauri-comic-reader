@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import {darkTheme, dateZhCN, NConfigProvider, NMessageProvider, NScrollbar, zhCN} from 'naive-ui'
 import {invoke} from "@tauri-apps/api/tauri";
+import {appWindow} from '@tauri-apps/api/window';
 
 async function minimizeWindow(event: any) {
   if (event.button == 1) {
-    await invoke('minimize_window')
+    let res = await invoke('minimize_window')
+    if (res)
+      await appWindow.minimize();
   }
 }
 
+window.addEventListener('auxclick', function (event) {
+  if (event.button === 4 || event.button === 3) {
+    console.log('123')
+    event.preventDefault()
+  }
+})
 </script>
 
 <template>
