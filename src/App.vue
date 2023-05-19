@@ -11,9 +11,8 @@ async function minimizeWindow(event: any) {
   }
 }
 
-window.addEventListener('auxclick', function (event) {
+window.addEventListener('mouseup', function (event) {
   if (event.button === 4 || event.button === 3) {
-    console.log('123')
     event.preventDefault()
   }
 })

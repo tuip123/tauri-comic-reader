@@ -40,7 +40,6 @@ export async function getConfig() {
             config.third_party_image_viewer = <string>re.value === 'null' ? '未设置' : re.value;
         } else if (re.key === 'minimize_window') {
             config.minimize_window = re.value === 'true';
-            console.log(config.minimize_window)
         } else {
             config[re.key] = re.value
         }

@@ -1,5 +1,5 @@
 <template>
-  <n-layout vertical size="large" @mousedown.stop="mouseEvent">
+  <n-layout vertical size="large" @mousedown="mouseEvent">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord"/>
     </n-layout-header>
@@ -7,7 +7,7 @@
       <n-scrollbar ref="scrollbar">
         <n-grid cols="2 s:2 m:3 l:6 xl:6 2xl:8" responsive="screen">
           <n-grid-item v-for="comic in comicList" :key="comic.id" style="padding: 6px">
-            <ComicItem :comic="comic" @delete="queryComic"/>
+            <ComicItem :comic="comic" @delete="deleteItem"/>
           </n-grid-item>
         </n-grid>
       </n-scrollbar>
@@ -44,7 +44,7 @@ import {
 import Header from "@/components/Header.vue";
 import ComicItem from "@/components/ComicItem.vue";
 import {useRoute} from "vue-router";
-import {onMounted, ref} from "vue";
+import {onMounted, onUnmounted, ref} from "vue";
 import {invoke} from "@tauri-apps/api/tauri";
 
 interface Pagination {
@@ -79,12 +79,75 @@ const libraryId = route.query.libraryId
 
 const searchWord = ref("")
 
+onMounted(() => {
+  document.addEventListener('keyup', keyup)
+  document.addEventListener('mousedown', mousedown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keyup', keyup)
+  document.removeEventListener('mousedown', mousedown)
+})
+
+const keyboardHotkey = {
+  'prev': 'ArrowLeft',
+  'next': 'ArrowRight',
+  'more': '+',
+  'less': '-'
+}
+
+const mouseHotkey = {
+  'prev': 4,
+  'next': 3
+}
+
+function mousedown(event: any) {
+  if (event.button === mouseHotkey.prev) {
+    if (pagination.value.current > 1) {
+      pageChange(pagination.value.current - 1)
+    }
+  }
+  if (event.button === mouseHotkey.next) {
+    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
+      pageChange(pagination.value.current + 1)
+    }
+  }
+}
+
+function keyup(event: any) {
+  if (event.key === keyboardHotkey.prev) {
+    if (pagination.value.current > 1) {
+      pageChange(pagination.value.current - 1)
+    }
+    event.preventDefault()
+  } else if (event.key === keyboardHotkey.next) {
+    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
+      pageChange(pagination.value.current + 1)
+    }
+    event.preventDefault()
+  } else if (event.key === keyboardHotkey.more) {
+    sizeChange(pagination.value.size + 6)
+  } else if (event.key === keyboardHotkey.less) {
+    if (pagination.value.size > 6) {
+      sizeChange(pagination.value.size - 6)
+    }
+  }
+}
+
 function setSearchWord(word: string) {
   searchWord.value = word
   queryComic()
 }
 
+async function deleteItem() {
+  pagination.value.total -= 1
+  await queryComic()
+}
+
 async function queryComic() {
+  if (pagination.value.current > (pagination.value.total / pagination.value.size)) {
+    pagination.value.current = Math.ceil(pagination.value.total / pagination.value.size)
+  }
   let res = await invoke('query_comic', {
     search: searchWord.value,
     page: pagination.value.current,
@@ -93,21 +156,18 @@ async function queryComic() {
   }) as ComicList
   pagination.value = res.pagination
   comicList.value = res.list
-  scrollbar.value.scrollTo({top: 0})
 }
 
 async function pageChange(num: number) {
   pagination.value.current = num
   await queryComic()
+  scrollbar.value.scrollTo({top: 0})
 }
 
 async function sizeChange(num: number) {
   pagination.value.size = num
   await queryComic()
-}
-
-function mouseEvent(event: any) {
-  console.log(event.button)
+  console.log()
 }
 
 onMounted(async () => {
