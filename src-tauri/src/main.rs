@@ -10,7 +10,6 @@ use std::fs::metadata;
 use std::path::Path;
 use std::process::Command;
 
-use enigo::*;
 use serde_with::serde_as;
 use sqlite::{Connection, Statement};
 use sqlite::State;
@@ -24,6 +23,7 @@ pub struct Config {
     pub key: String,
     pub value: String,
 }
+
 
 #[serde_as]
 #[derive(serde::Serialize)]
@@ -132,31 +132,46 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','0.0.1');\
+        insert into config (key,value) values ('version','0.1.2');\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
+        insert into config (key,value) values ('minimize_window','false');\
+        insert into config (key,value) values ('version_code',2);
         ";
         conn.execute(query).unwrap();
     }
+
 }
 
 fn update_app() {
-    let now_version = "0.1.1";
-
+    let now_version_code = 2;
+    let now_version = "0.1.2";
     let conn = get_conn().unwrap();
-    let mut select = conn.prepare("select value from config where key = 'version'").unwrap();
+    let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
-    let mut version: String = String::from("");
+    let mut version_code = -1;
     while let Ok(State::Row) = select.next() {
-        version = select.read::<String, _>(0).unwrap();
+        let str = select.read::<String, _>(0).unwrap();
+        version_code = str.parse::<i32>().unwrap();
     }
-    if version.as_str() != now_version {
+    if version_code == -1 {
+        let insert = "insert into config (key,value) values ('version_code',1) ";
+        conn.execute(insert).unwrap();
+    }
+    if version_code < now_version_code {
+        if version_code < 1 {
+            let insert = "insert into config (key,value) values ('minimize_window','false') ";
+            match conn.execute(insert) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
         update = conn.prepare("update config set value = ? where key = 'version' ").unwrap();
         update.bind((1, now_version)).unwrap();
+        update = conn.prepare("update config set value = ? where key = 'version_code' ").unwrap();
+        update.bind((1, now_version_code.to_string().as_str())).unwrap();
         update.next().unwrap();
-        let insert = "insert into config (key,value) values ('minimize_window','false') ";
-        conn.execute(insert).unwrap();
     }
 }
 
@@ -402,16 +417,10 @@ fn update_config(key: &str, value: &str) -> Result<(), String> {
         count = select.read::<i64, _>(0).unwrap();
     }
     if count == 0 {
-        println!("{}", key);
-        println!("{}", value);
         let mut insert = conn.prepare("insert into config (key,value) values (?,?) ").unwrap();
-        println!("123");
         insert.bind((1, key)).unwrap();
-        println!("123");
         insert.bind((2, value)).unwrap();
-        println!("123");
         insert.next().unwrap();
-        println!("123");
         Ok(())
     } else {
         let mut update = conn.prepare("update config set value = ? where key = ?").unwrap();
@@ -587,7 +596,7 @@ fn main() {
             delete_comic,
             delete_library,
             read_comic,
-            minimize_window
+            minimize_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
