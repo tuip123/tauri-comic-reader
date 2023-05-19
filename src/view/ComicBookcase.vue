@@ -1,5 +1,5 @@
 <template>
-  <n-layout vertical size="large" @mousedown="mouseEvent">
+  <n-layout vertical size="large">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord"/>
     </n-layout-header>
