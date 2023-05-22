@@ -79,61 +79,6 @@ const libraryId = route.query.libraryId
 
 const searchWord = ref("")
 
-onMounted(() => {
-  document.addEventListener('keyup', keyup)
-  document.addEventListener('mousedown', mousedown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keyup', keyup)
-  document.removeEventListener('mousedown', mousedown)
-})
-
-const keyboardHotkey = {
-  'prev': 'ArrowLeft',
-  'next': 'ArrowRight',
-  'more': '+',
-  'less': '-'
-}
-
-const mouseHotkey = {
-  'prev': 4,
-  'next': 3
-}
-
-function mousedown(event: any) {
-  if (event.button === mouseHotkey.prev) {
-    if (pagination.value.current > 1) {
-      pageChange(pagination.value.current - 1)
-    }
-  }
-  if (event.button === mouseHotkey.next) {
-    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
-      pageChange(pagination.value.current + 1)
-    }
-  }
-}
-
-function keyup(event: any) {
-  if (event.key === keyboardHotkey.prev) {
-    if (pagination.value.current > 1) {
-      pageChange(pagination.value.current - 1)
-    }
-    event.preventDefault()
-  } else if (event.key === keyboardHotkey.next) {
-    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
-      pageChange(pagination.value.current + 1)
-    }
-    event.preventDefault()
-  } else if (event.key === keyboardHotkey.more) {
-    sizeChange(pagination.value.size + 6)
-  } else if (event.key === keyboardHotkey.less) {
-    if (pagination.value.size > 6) {
-      sizeChange(pagination.value.size - 6)
-    }
-  }
-}
-
 function setSearchWord(word: string) {
   searchWord.value = word
   queryComic()
@@ -167,12 +112,64 @@ async function pageChange(num: number) {
 async function sizeChange(num: number) {
   pagination.value.size = num
   await queryComic()
-  console.log()
 }
 
 onMounted(async () => {
+  document.addEventListener('keyup', keyup)
+  document.addEventListener('mouseup', mouseup)
   await queryComic()
 })
+
+onUnmounted(() => {
+  document.removeEventListener('keyup', keyup)
+  document.removeEventListener('mouseup', mouseup)
+})
+
+const keyboardHotkey = {
+  'prev': 'ArrowLeft',
+  'next': 'ArrowRight',
+  'more': '+',
+  'less': '-'
+}
+const mouseHotkey = {
+  'prev': 4,
+  'next': 3
+}
+
+
+function mouseup(event: MouseEvent) {
+  if (event.button === mouseHotkey.prev) {
+    if (pagination.value.current > 1) {
+      pageChange(pagination.value.current - 1)
+    }
+  }
+  if (event.button === mouseHotkey.next) {
+    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
+      pageChange(pagination.value.current + 1)
+    }
+  }
+}
+
+function keyup(event: KeyboardEvent) {
+  if (event.key === keyboardHotkey.prev) {
+    if (pagination.value.current > 1) {
+      pageChange(pagination.value.current - 1)
+    }
+    event.preventDefault()
+  } else if (event.key === keyboardHotkey.next) {
+    if (pagination.value.current < (pagination.value.total / pagination.value.size)) {
+      pageChange(pagination.value.current + 1)
+    }
+    event.preventDefault()
+  } else if (event.key === keyboardHotkey.more) {
+    sizeChange(pagination.value.size + 6)
+  } else if (event.key === keyboardHotkey.less) {
+    if (pagination.value.size > 6) {
+      sizeChange(pagination.value.size - 6)
+    }
+  }
+}
+
 </script>
 
 <style scoped>

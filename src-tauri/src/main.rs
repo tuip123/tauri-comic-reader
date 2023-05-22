@@ -132,21 +132,22 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','0.1.2');\
+        insert into config (key,value) values ('version','0.1.3');\
+        insert into config (key,value) values ('version_code',3);\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
         insert into config (key,value) values ('minimize_window','false');\
-        insert into config (key,value) values ('version_code',2);
+        insert into config (key,value) values ('comic_width',40);\
+        insert into config (key,value) values ('read_type',0);
         ";
         conn.execute(query).unwrap();
     }
-
 }
 
 fn update_app() {
-    let now_version_code = 2;
-    let now_version = "0.1.2";
+    let now_version_code = 3;
+    let now_version = "0.1.3";
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
@@ -162,6 +163,14 @@ fn update_app() {
     if version_code < now_version_code {
         if version_code < 1 {
             let insert = "insert into config (key,value) values ('minimize_window','false') ";
+            match conn.execute(insert) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+        if version_code < 3 {
+            let insert = "insert into config (key,value) values ('comic_width',40);\
+                                insert into config (key,value) values ('read_type',0);";
             match conn.execute(insert) {
                 Ok(_) => {}
                 Err(_) => {}

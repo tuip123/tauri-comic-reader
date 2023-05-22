@@ -1,7 +1,6 @@
 <template>
   <n-card :bordered="false" content-style="padding:0 10px 20px 10px">
     <template #cover>
-      <!--      <img src="https://07akioni.oss-cn-beijing.aliyuncs.com/07akioni.jpeg" alt=""  @click="testRead" >-->
       <img :src="src" alt="" @click="read">
     </template>
     <n-thing>
@@ -39,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import {NCard, NThing, NButton, NSpace, NEllipsis, NIcon, useMessage} from 'naive-ui'
+import {NButton, NCard, NEllipsis, NIcon, NSpace, NThing, useMessage} from 'naive-ui'
 import {FolderOpenOutline, TrashOutline} from '@vicons/ionicons5'
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri"
 import {useConfigStore} from "@/store/config";
@@ -56,7 +55,7 @@ async function deleteComic() {
   await invoke('delete_comic', {id: props.comic.id})
       .then(() => {
         message.success('已删除：' + props.comic.title)
-        if (config.delete_source_file){
+        if (config.delete_source_file) {
           message.error('文件已被删除')
         }
       })
@@ -68,7 +67,7 @@ async function deleteComic() {
 
 function read() {
   if (!config.third_party_open) {
-    router.push({path: '/ComicReader', query: {id: props.comic.id,libraryId:props.comic.library_id}})
+    router.push({path: '/ComicReader', query: {id: props.comic.id, libraryId: props.comic.library_id}})
   } else {
     message.info('正在用第三方查看器打开：' + props.comic.title)
     invoke('open_with_third_party', {folder: props.comic.path})
@@ -82,7 +81,7 @@ function read() {
 function openSourceFolder() {
   message.info('正在打开：' + props.comic.title)
   invoke('open_source_folder', {folder: props.comic.path})
-      .then(()=>{
+      .then(() => {
         message.success('已打开')
       })
       .catch((err) => {

@@ -15,6 +15,7 @@
             bordered
         >
           <div>
+            <!--            比例区-->
             <div style="padding: 24px 24px 0;">
               <n-form
                   label-placement="left"
@@ -23,7 +24,7 @@
               >
                 <n-form-item label="画面比例：">
                   <n-input-number button-placement="right" :max="100" :min="30" :step="10"
-                                  v-model:value="comicWidth">
+                                  v-model:value="comicWidth" :on-update:value="changeWidth">
                     <template #suffix>
                       %
                     </template>
@@ -31,9 +32,23 @@
                 </n-form-item>
               </n-form>
             </div>
+            <!--            页面类型选择区-->
+            <div>
+              <n-space justify="space-around">
+                <n-radio-group v-model:value="readType" size="small" :on-update:value="changeReadType">
+                  <n-radio-button
+                      v-for="type in types"
+                      :key="type.value"
+                      :value="type.value"
+                      :label="type.label"
+                  />
+                </n-radio-group>
+              </n-space>
+            </div>
+            <!--            书架-->
             <div>
               <n-config-provider v-for="(comic,index) of libraryComics" :theme="comic.id === comicId?null:darkTheme">
-                <n-card content-style="padding:4px" @click="changeComic(comic.id)" >
+                <n-card content-style="padding:4px" @click="changeComic(comic.id)">
                   <n-space justify="space-between" :wrap="false">
                     <n-ellipsis line-clamp="2" style="height: 40px">
                       {{ comic.title }}
@@ -52,7 +67,8 @@
           </div>
         </n-layout-sider>
         <!--中区图片区-->
-        <n-layout-content :native-scrollbar="false" ref="center">
+        <n-layout-content ref="center">
+
           <div class="top-hover-area">
             <n-button text class="back-button" @click="back">
               <template #icon>
@@ -62,9 +78,48 @@
               </template>
             </n-button>
           </div>
-          <div v-for="comic of comicPage" style="margin: auto;" :style="'width:'+comicWidth+'%'">
-            <img style="width: 100%;" :src="comic" ref="comic" alt=""/>
-          </div>
+
+          <n-scrollbar v-if="readType === 0">
+            <div v-for="comic of comicPage" style="margin: auto;" :style="'width:'+comicWidth+'%'">
+              <img style="width: 100%;" :src="comic" ref="comic" alt=""/>
+            </div>
+          </n-scrollbar>
+
+          <n-scrollbar v-if="readType === 1">
+            <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
+              <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
+            </div>
+          </n-scrollbar>
+
+          <n-scrollbar v-if="readType === 2">
+            <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
+              <n-space justify="space-around" :wrap="false" v-if="handlePageId%2===0">
+                <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
+                <img style="width: 100%;" :src="comicPage[handlePageId+1]" alt=""
+                     v-if="handlePageId+1<comicPage.length"/>
+              </n-space>
+              <n-space justify="space-around" :wrap="false" v-else>
+                <img style="width: 100%;" :src="comicPage[handlePageId-1]" alt=""/>
+                <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
+              </n-space>
+            </div>
+          </n-scrollbar>
+
+          <n-scrollbar v-if="readType === 3">
+            <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
+              <n-space justify="space-around" :wrap="false" v-if="handlePageId%2===0">
+                <img style="width: 100%;" :src="comicPage[handlePageId+1]" alt=""
+                     v-if="handlePageId+1<comicPage.length"/>
+                <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
+              </n-space>
+              <n-space justify="space-around" :wrap="false" v-else>
+                <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
+                <img style="width: 100%;" :src="comicPage[handlePageId-1]" alt=""/>
+              </n-space>
+            </div>
+          </n-scrollbar>
+
+
         </n-layout-content>
       </n-layout>
     </n-layout-content>
@@ -91,27 +146,30 @@
 
 <script setup lang="ts">
 import {
+  darkTheme,
   NButton,
-  NIcon,
-  NInputNumber,
+  NCard,
+  NConfigProvider,
+  NEllipsis,
   NForm,
   NFormItem,
-  NScrollbar,
+  NIcon,
+  NInputNumber,
   NLayout,
   NLayoutContent,
   NLayoutSider,
-  NEllipsis,
-  NCard,
+  NRadioButton,
+  NRadioGroup,
+  NScrollbar,
   NSpace,
-  NConfigProvider,
-  darkTheme,
   useMessage
 } from 'naive-ui'
 import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
-import {invoke, convertFileSrc} from "@tauri-apps/api/tauri";
-import {onMounted, ref} from "vue";
+import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
+import {onMounted, onUnmounted, ref} from "vue";
 import {useConfigStore} from "@/store/config";
+
 const config = useConfigStore()
 
 const router = useRouter()
@@ -135,29 +193,78 @@ const comic = ref()
 const center = ref()
 const comicWidth = ref(40)
 
+const readType = ref(0)
+const types = ref([
+  {value: 0, label: "滚动"},
+  {value: 1, label: "单页"},
+  {value: 2, label: "左右"},
+  {value: 3, label: "右左"}
+])
+
+const handlePageId = ref(0)
+
 function back() {
   router.go(-1)
 }
 
 function turnPage(i: number) {
-  let scrollTop = comic.value[i].offsetTop
-  center.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+  console.log('turn to ', i)
+  handlePageId.value = i
+  if (readType.value === 0) {
+    let scrollTop = comic.value[i].offsetTop
+    center.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+  }
+}
+
+function prevPage() {
+  if (handlePageId.value > 0)
+    handlePageId.value -= 1
+}
+
+function nextPage() {
+  if (handlePageId.value < comicPage.value.length - 1)
+    handlePageId.value += 1
+}
+
+function widthLarger() {
+  if (comicWidth.value < 100) {
+    comicWidth.value += 10
+  }
+}
+
+function widthSmaller() {
+  if (comicWidth.value > 30) {
+    comicWidth.value -= 10
+  }
 }
 
 async function changeComic(id: number) {
   comicId.value = id
+  handlePageId.value = 0
   await initData()
 }
 
-async function deleteComic(index:number){
+function changeWidth(width: number) {
+  comicWidth.value = width
+  invoke("update_config", {key: 'comic_width', value: width.toString()})
+}
+
+
+function changeReadType(type: number) {
+  readType.value = type
+  invoke("update_config", {key: 'read_type', value: type.toString()})
+
+}
+
+async function deleteComic(index: number) {
   let flag = false
-  if (libraryComics.value[index].id === comicId.value){
+  if (libraryComics.value[index].id === comicId.value) {
     flag = true
   }
-  await invoke('delete_comic', {id:libraryComics.value[index].id})
+  await invoke('delete_comic', {id: libraryComics.value[index].id})
       .then(() => {
         message.success('已删除：' + libraryComics.value[index].title)
-        if (config.delete_source_file){
+        if (config.delete_source_file) {
           message.error('文件已被删除')
         }
       })
@@ -165,23 +272,33 @@ async function deleteComic(index:number){
         message.error('删除错误：' + err as string)
       })
 
-  libraryComics.value.splice(index,1)
-  if (flag){
+  libraryComics.value.splice(index, 1)
+  if (flag) {
     comicPage.value = []
-    if (libraryComics.value.length>0){
-      let targetIndex = index>=libraryComics.value.length?index-1:index
+    if (libraryComics.value.length > 0) {
+      let targetIndex = index >= libraryComics.value.length ? index - 1 : index
       comicId.value = libraryComics.value[targetIndex].id
       await initData()
     }
   }
 }
 
+async function initConfig() {
+  comicWidth.value = Number(config.comic_width)
+  readType.value = Number(config.read_type)
+}
+
+
 async function initData() {
   comicPage.value = []
   try {
-    let res = <string[]>await invoke('read_comic', {id:comicId.value})
+    let res = <string[]>await invoke('read_comic', {id: comicId.value})
     res.forEach((e) => {
-      comicPage.value.push(convertFileSrc(e))
+      if (e === "") {
+        comicPage.value.push(e)
+      } else {
+        comicPage.value.push(convertFileSrc(e))
+      }
     })
   } catch (e) {
     router.go(-1)
@@ -195,11 +312,49 @@ async function initLibrary(libraryId: number) {
 
 onMounted(async () => {
   comicId.value = Number(route.query.id)
+  await initConfig()
   await initData()
   await initLibrary(Number(route.query.libraryId))
-
+  document.addEventListener('keyup', keyup)
+  document.addEventListener('mouseup', mouseup)
 })
 
+onUnmounted(() => {
+  document.removeEventListener('keyup', keyup)
+  document.removeEventListener('mouseup', mouseup)
+})
+
+const keyboardHotkey = {
+  'prev': '[',
+  'next': ']',
+  'larger': '+',
+  'smaller': '-'
+}
+const mouseHotkey = {
+  'prev': 4,
+  'next': 3
+}
+
+
+function keyup(event: KeyboardEvent) {
+  if (event.key === keyboardHotkey.next) {
+    nextPage()
+  } else if (event.key === keyboardHotkey.prev) {
+    prevPage()
+  } else if (event.key === keyboardHotkey.larger) {
+    widthLarger()
+  } else if (event.key === keyboardHotkey.smaller) {
+    widthSmaller()
+  }
+}
+
+function mouseup(event: MouseEvent) {
+  if (event.button === mouseHotkey.next) {
+    nextPage()
+  } else if (event.button === mouseHotkey.prev) {
+    prevPage()
+  }
+}
 
 </script>
 
