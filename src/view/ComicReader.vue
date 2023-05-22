@@ -244,9 +244,10 @@ async function changeComic(id: number) {
   await initData()
 }
 
-function changeWidth(width: number) {
-  comicWidth.value = width
-  invoke("update_config", {key: 'comic_width', value: width.toString()})
+function changeWidth(width: number | null) {
+  let w = width as number
+  comicWidth.value = w
+  invoke("update_config", {key: 'comic_width', value: w.toString()})
 }
 
 
