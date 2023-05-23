@@ -67,7 +67,7 @@
           </div>
         </n-layout-sider>
         <!--中区图片区-->
-        <n-layout-content>
+        <n-layout-content @wheel="wheel">
 
           <div class="top-hover-area">
             <n-button text class="back-button" @click="back">
@@ -85,13 +85,13 @@
             </div>
           </n-scrollbar>
 
-          <n-scrollbar v-if="readType === 1">
+          <n-scrollbar v-if="readType === 1" ref="type1" :on-scroll="scrollPageDown">
             <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
               <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
             </div>
           </n-scrollbar>
 
-          <n-scrollbar v-if="readType === 2">
+          <n-scrollbar v-if="readType === 2" ref="type2" :on-scroll="scrollPageDown">
             <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
               <n-space justify="space-around" :wrap="false" v-if="handlePageId%2===0">
                 <img style="width: 100%;" :src="comicPage[handlePageId]" alt=""/>
@@ -105,7 +105,7 @@
             </div>
           </n-scrollbar>
 
-          <n-scrollbar v-if="readType === 3">
+          <n-scrollbar v-if="readType === 3" ref="type3" :on-scroll="scrollPageDown">
             <div style="margin: auto;" :style="'width:'+comicWidth+'%'">
               <n-space justify="space-around" :wrap="false" v-if="handlePageId%2===0">
                 <img style="width: 100%;" :src="comicPage[handlePageId+1]" alt=""
@@ -191,6 +191,9 @@ const comicPage = ref<string[]>([])
 const comicId = ref(0)
 const comic = ref()
 const type0 = ref()
+const type1 = ref()
+const type2 = ref()
+const type3 = ref()
 const rightSider = ref()
 const rightSiderImage = ref()
 const stopRightScroll = ref(false)
@@ -209,9 +212,8 @@ const handlePageId = ref(0)
 
 watch(
     () => handlePageId.value,
-    (id) => {
+    (id: number) => {
       if (!stopRightScroll.value) {
-
         let scrollTop = rightSiderImage.value[id].offsetTop
         rightSider.value.scrollTo({top: scrollTop, behavior: 'smooth'})
       }
@@ -220,17 +222,15 @@ watch(
 )
 watch(
     () => readType.value,
-    (type) => {
+    (type: number) => {
       if (type === 0) {
-        setTimeout(test, 1)
+        setTimeout(function () {
+          let scrollTop = comic.value[handlePageId.value].offsetTop
+          type0.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+        }, 1)
       }
     }
 )
-
-function test() {
-  let scrollTop = comic.value[handlePageId.value].offsetTop
-  type0.value.scrollTo({top: scrollTop, behavior: 'smooth'})
-}
 
 function back() {
   router.go(-1)
@@ -243,12 +243,22 @@ function turnPage(i: number) {
     let scrollTop = comic.value[i].offsetTop
     type0.value.scrollTo({top: scrollTop, behavior: 'smooth'})
   } else {
+    if (readType.value === 1) {
+      type1.value.scrollTo({top: 0, behavior: 'auto'})
+    } else if (readType.value === 2 || readType.value === 3) {
+      if ((handlePageId.value % 2 === 0 && i !== handlePageId.value + 1) || (handlePageId.value % 2 !== 0 && i !== handlePageId.value - 1)) {
+        if (readType.value === 2)
+          type2.value.scrollTo({top: 0, behavior: 'auto'})
+        if (readType.value === 3)
+          type3.value.scrollTo({top: 0, behavior: 'auto'})
+      }
+    }
     handlePageId.value = i
   }
 
   setTimeout(function () {
     stopRightScroll.value = false
-  }, 1000)
+  }, 1)
 }
 
 function type0scroll(event: any) {
@@ -265,11 +275,19 @@ function type0scroll(event: any) {
 function prevPage() {
   if (handlePageId.value > 0)
     handlePageId.value -= 1
+  if (readType.value === 2 || readType.value === 3) {
+    if (handlePageId.value > 0)
+      handlePageId.value -= 1
+  }
 }
 
 function nextPage() {
   if (handlePageId.value < comicPage.value.length - 1)
     handlePageId.value += 1
+  if (readType.value === 2 || readType.value === 3) {
+    if (handlePageId.value < comicPage.value.length - 1)
+      handlePageId.value += 1
+  }
 }
 
 function widthLarger() {
@@ -315,8 +333,8 @@ async function deleteComic(index: number) {
           message.error('文件已被删除')
         }
       })
-      .catch((err) => {
-        message.error('删除错误：' + err as string)
+      .catch((err: string) => {
+        message.error('删除错误：' + err)
       })
 
   libraryComics.value.splice(index, 1)
@@ -364,11 +382,13 @@ onMounted(async () => {
   await initLibrary(Number(route.query.libraryId))
   document.addEventListener('keyup', keyup)
   document.addEventListener('mouseup', mouseup)
+  // document.addEventListener('wheel', wheel)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keyup', keyup)
   document.removeEventListener('mouseup', mouseup)
+  // document.removeEventListener('wheel', wheel)
 })
 
 const keyboardHotkey = {
@@ -403,6 +423,80 @@ function mouseup(event: MouseEvent) {
   }
 }
 
+const pageDownCount = ref(0)
+const wheelSide = ref('')
+const pageChangeFlag = ref(true)
+
+function wheel(event: WheelEvent) {
+
+  // console.log(event._vts - _vts.value)
+  // if (event._vts - _vts.value < 25) {
+  //   return
+  // }
+  // _vts.value = event._vts
+  if (readType.value === 0)
+    return
+  if (!pageChangeFlag.value)
+    return
+  pageDownCount.value++
+
+
+  let tempSide = ''
+  if (event.deltaY > 0) {
+    tempSide = 'down'
+  } else if (event.deltaY < 0) {
+    tempSide = 'up'
+  }
+  if (tempSide !== wheelSide.value) {
+    wheelSide.value = ''
+    pageDownCount.value = 0
+  }
+  // if (wheelSide.value !== tempSide) {
+  //   wheelSide.value = tempSide
+  //   pageDownCount.value = 0
+  // } else {
+  //   pageDownCount.value++
+  // }
+  if (pageDownCount.value > 5) {
+    pageDownCount.value = 0
+
+    let i = 1
+    if (wheelSide.value === 'up') {
+      i = -1
+    } else if (wheelSide.value === 'down') {
+      i = 1
+    }
+    if (readType.value === 1) {
+      if (handlePageId.value + i < comicPage.value.length && handlePageId.value + i >= 0) {
+        handlePageId.value += i
+        type1.value.scrollTo({top: 0, behavior: 'auto'})
+      }
+    } else if (readType.value === 2 || readType.value === 3) {
+      i *= 2
+      if (handlePageId.value + i < comicPage.value.length && handlePageId.value + i >= 0) {
+        handlePageId.value += i
+        if (readType.value === 2)
+          type2.value.scrollTo({top: 0, behavior: 'auto'})
+        if (readType.value === 3)
+          type3.value.scrollTo({top: 0, behavior: 'auto'})
+      }
+    }
+  }
+}
+
+function scrollPageDown(event: Event) {
+  let target = event.target as HTMLDivElement
+  if (target.scrollTop === 0) {
+    wheelSide.value = 'up'
+    pageChangeFlag.value = true
+  } else if (target.scrollTop === target.scrollHeight - target.offsetHeight) {
+    wheelSide.value = 'down'
+    pageChangeFlag.value = true
+  } else {
+    pageDownCount.value = 0
+    pageChangeFlag.value = false
+  }
+}
 </script>
 
 <style scoped>
