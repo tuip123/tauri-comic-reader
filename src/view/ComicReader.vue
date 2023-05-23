@@ -133,9 +133,9 @@
         bordered>
       <n-scrollbar ref="rightSider">
         <div style="padding:0 12px">
-          <div v-for="(comic,i) of comicPage" :key="'right_'+comic">
-            <img ref="rightSiderImage" style="width: 100%;" :src="comic" @click="turnPage(i)"
-                 :style="i===handlePageId?'border-radius: 100px':''"/>
+          <div v-for="(comic,i) of comicPage" :key="'right_'+comic" style="width: 100%;">
+            <img ref="rightSiderImage" style="width: 100%; " :src="comic" @click="turnPage(i)"
+                 :style="i===handlePageId?'border-end-end-radius: 20px;border:solid cornflowerblue;border-width: 0 2px 0 0;':''"/>
           </div>
         </div>
       </n-scrollbar>
