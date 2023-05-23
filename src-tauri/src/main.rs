@@ -147,7 +147,6 @@ fn init_db() {
 
 fn update_app() {
     let now_version_code = 3;
-    let now_version = "0.1.3";
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
@@ -176,8 +175,8 @@ fn update_app() {
                 Err(_) => {}
             };
         }
-        update = conn.prepare("update config set value = ? where key = 'version' ").unwrap();
-        update.bind((1, now_version)).unwrap();
+        let update_version = "update config set value = '0.1.3' where key = 'version' ";
+        conn.execute(update_version).unwrap();
         update = conn.prepare("update config set value = ? where key = 'version_code' ").unwrap();
         update.bind((1, now_version_code.to_string().as_str())).unwrap();
         update.next().unwrap();
