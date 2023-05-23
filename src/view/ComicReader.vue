@@ -67,7 +67,7 @@
           </div>
         </n-layout-sider>
         <!--中区图片区-->
-        <n-layout-content ref="center">
+        <n-layout-content>
 
           <div class="top-hover-area">
             <n-button text class="back-button" @click="back">
@@ -79,7 +79,7 @@
             </n-button>
           </div>
 
-          <n-scrollbar v-if="readType === 0">
+          <n-scrollbar v-if="readType === 0" ref="type0" :on-scroll="type0scroll">
             <div v-for="comic of comicPage" style="margin: auto;" :style="'width:'+comicWidth+'%'">
               <img style="width: 100%;" :src="comic" ref="comic" alt=""/>
             </div>
@@ -127,15 +127,15 @@
     <n-layout-sider
         collapse-mode="width"
         :default-collapsed="false"
-        :native-scrollbar="false"
         show-trigger="arrow-circle"
         :width="240"
         :collapsed-width="120"
         bordered>
-      <n-scrollbar>
+      <n-scrollbar ref="rightSider">
         <div style="padding:0 12px">
           <div v-for="(comic,i) of comicPage" :key="'right_'+comic">
-            <img style="width: 100%;" :src="comic" @click="turnPage(i)" alt=""/>
+            <img ref="rightSiderImage" style="width: 100%;" :src="comic" @click="turnPage(i)"
+                 :style="i===handlePageId?'border-radius: 100px':''"/>
           </div>
         </div>
       </n-scrollbar>
@@ -167,7 +167,7 @@ import {
 import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
-import {onMounted, onUnmounted, ref} from "vue";
+import {onMounted, onUnmounted, ref, watch} from "vue";
 import {useConfigStore} from "@/store/config";
 
 const config = useConfigStore()
@@ -190,10 +190,14 @@ const libraryComics = ref<Comic[]>([])
 const comicPage = ref<string[]>([])
 const comicId = ref(0)
 const comic = ref()
-const center = ref()
-const comicWidth = ref(40)
+const type0 = ref()
+const rightSider = ref()
+const rightSiderImage = ref()
+const stopRightScroll = ref(false)
 
+const comicWidth = ref(40)
 const readType = ref(0)
+
 const types = ref([
   {value: 0, label: "滚动"},
   {value: 1, label: "单页"},
@@ -203,16 +207,58 @@ const types = ref([
 
 const handlePageId = ref(0)
 
+watch(
+    () => handlePageId.value,
+    (id) => {
+      if (!stopRightScroll.value) {
+
+        let scrollTop = rightSiderImage.value[id].offsetTop
+        rightSider.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+      }
+
+    }
+)
+watch(
+    () => readType.value,
+    (type) => {
+      if (type === 0) {
+        setTimeout(test, 1)
+      }
+    }
+)
+
+function test() {
+  let scrollTop = comic.value[handlePageId.value].offsetTop
+  type0.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+}
+
 function back() {
   router.go(-1)
 }
 
 function turnPage(i: number) {
-  console.log('turn to ', i)
-  handlePageId.value = i
+  stopRightScroll.value = true
+
   if (readType.value === 0) {
     let scrollTop = comic.value[i].offsetTop
-    center.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+    type0.value.scrollTo({top: scrollTop, behavior: 'smooth'})
+  } else {
+    handlePageId.value = i
+  }
+
+  setTimeout(function () {
+    stopRightScroll.value = false
+  }, 1000)
+}
+
+function type0scroll(event: any) {
+  let scrollTop = event.target.scrollTop
+  for (let i = 0; i < comic.value.length; i++) {
+    let c = comic.value[i]
+    if ((c.offsetTop + (c.height * 0.8)) >= scrollTop) {
+      handlePageId.value = i
+      break
+    }
   }
 }
 
