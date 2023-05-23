@@ -429,17 +429,22 @@ const pageChangeFlag = ref(true)
 
 function wheel(event: WheelEvent) {
 
-  // console.log(event._vts - _vts.value)
-  // if (event._vts - _vts.value < 25) {
-  //   return
-  // }
-  // _vts.value = event._vts
   if (readType.value === 0)
     return
   if (!pageChangeFlag.value)
     return
   pageDownCount.value++
 
+  let target
+  if (readType.value === 1) {
+    target = type1 as any
+  }
+  if (readType.value === 2) {
+    target = type2 as any
+  }
+  if (readType.value === 3) {
+    target = type3 as any
+  }
 
   let tempSide = ''
   if (event.deltaY > 0) {
@@ -450,13 +455,16 @@ function wheel(event: WheelEvent) {
   if (tempSide !== wheelSide.value) {
     wheelSide.value = ''
     pageDownCount.value = 0
+    // 判断是否存在 内容未铺满的情况 如果存在就需要额外对whellside赋值
+    let event_target = event.target as HTMLElement
+    let image_target
+    if (event_target.getElementsByTagName('img').length > 0)
+      image_target = event_target.getElementsByTagName('img')[0] as HTMLImageElement
+    else image_target = event_target as HTMLImageElement
+    if (image_target.height < target.value.$el.nextSibling.scrollHeight)
+      wheelSide.value = tempSide
   }
-  // if (wheelSide.value !== tempSide) {
-  //   wheelSide.value = tempSide
-  //   pageDownCount.value = 0
-  // } else {
-  //   pageDownCount.value++
-  // }
+
   if (pageDownCount.value > 5) {
     pageDownCount.value = 0
 
