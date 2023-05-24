@@ -132,8 +132,8 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','0.1.4');\
-        insert into config (key,value) values ('version_code',4);\
+        insert into config (key,value) values ('version','0.1.5');\
+        insert into config (key,value) values ('version_code',5);\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
@@ -146,7 +146,7 @@ fn init_db() {
 }
 
 fn update_app() {
-    let now_version_code = 4;
+    let now_version_code = 5;
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
@@ -175,14 +175,14 @@ fn update_app() {
                 Err(_) => {}
             };
         }
-        if version_code < 4 {
+        if version_code < 5 {
             let alert = "ALTER TABLE comic ADD COLUMN isDelete INTEGER DEFAULT 0";
             match conn.execute(alert) {
                 Ok(_) => {}
                 Err(_) => {}
             };
         }
-        let update_version = "update config set value = '0.1.4' where key = 'version' ";
+        let update_version = "update config set value = '0.1.5' where key = 'version' ";
         conn.execute(update_version).unwrap();
         update = conn.prepare("update config set value = ? where key = 'version_code' ").unwrap();
         update.bind((1, now_version_code.to_string().as_str())).unwrap();
