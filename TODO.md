@@ -1,7 +1,7 @@
 v 0.2.0
 
 * **重构**
-    - [ ] reload_library方法重做，详见main.rs
+    - [X] reload_library方法重做，详见main.rs
 
 * **功能开发**
     1.

@@ -104,7 +104,7 @@ fn init_db() {
         b = true;
     }
     if !b {
-        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,title TEXT,cover TEXT,count INTEGER,libraryId INTEGER)";
+        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,title TEXT,cover TEXT,count INTEGER,libraryId INTEGER,isDelete INTEGER DEFAULT 0)";
         conn.execute(query).unwrap();
     }
 
@@ -132,8 +132,8 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','0.1.3');\
-        insert into config (key,value) values ('version_code',3);\
+        insert into config (key,value) values ('version','0.1.4');\
+        insert into config (key,value) values ('version_code',4);\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
@@ -146,7 +146,7 @@ fn init_db() {
 }
 
 fn update_app() {
-    let now_version_code = 3;
+    let now_version_code = 4;
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
@@ -175,7 +175,14 @@ fn update_app() {
                 Err(_) => {}
             };
         }
-        let update_version = "update config set value = '0.1.3' where key = 'version' ";
+        if version_code < 4 {
+            let alert = "ALTER TABLE comic ADD COLUMN isDelete INTEGER DEFAULT 0";
+            match conn.execute(alert) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+        let update_version = "update config set value = '0.1.4' where key = 'version' ";
         conn.execute(update_version).unwrap();
         update = conn.prepare("update config set value = ? where key = 'version_code' ").unwrap();
         update.bind((1, now_version_code.to_string().as_str())).unwrap();
@@ -227,6 +234,100 @@ fn add_library(path: &str) -> Result<(), String> {
 
 #[tauri::command]
 fn reload_library(library_id: i64) -> Result<(), String> {
+    let conn = get_conn().unwrap();
+
+    let mut select = conn.prepare("select root from library where Id = ?").unwrap();
+    select.bind((1, library_id)).unwrap();
+    let mut root = String::from("");
+    while let Ok(State::Row) = select.next() {
+        root = select.read::<String, _>(0).unwrap();
+    }
+    if root == "" {
+        return Err(String::from("库id不存在"));
+    }
+    let mut path_set: HashSet<String> = HashSet::new();
+    let paths = fs::read_dir(root).unwrap();
+    for path in paths {
+        let comic_path = path.unwrap().path();
+        let title = comic_path.to_str().unwrap().to_string();
+        path_set.insert(title);
+    }
+
+
+    select = conn.prepare("select Id,path from comic where libraryId = ? ").unwrap();
+    select.bind((1, library_id)).unwrap();
+    while let State::Row = select.next().unwrap() {
+        let id: i64 = select.read::<i64, _>(0).unwrap();
+        let path: String = select.read::<String, _>(1).unwrap();
+        if path_set.contains(&path) {
+            path_set.remove(&path);
+        } else {
+            let mut delete = conn.prepare("delete from comic where Id = ?").unwrap();
+            delete.bind((1, id)).unwrap();
+            delete.next().unwrap();
+        }
+    }
+
+
+    let mut count = 0;
+    for comic_path in path_set.iter() {
+        let mut insert = conn.prepare("insert into comic (libraryId,title,path,cover,count) values (?,?,?,?,?)").unwrap();
+        let comic_path_clone = comic_path.clone();
+        let comic_path_clone2 = comic_path.clone();
+        let comic_path_clone3 = comic_path.clone();
+        let md = metadata(comic_path_clone3).unwrap();
+        if md.is_file() {
+            continue;
+        }
+
+        let temp: Vec<_> = comic_path.split("\\").collect();
+        let title = temp[temp.len() - 1];
+        // let title = comic_path.file_name().unwrap().to_str().unwrap();
+
+        let comic_path_str = comic_path_clone.as_str();
+        let mut comic_cover_str = comic_path_str.clone().to_string();
+
+        let files = fs::read_dir(comic_path_clone2).unwrap();
+        let mut comic_count = 0;
+        let mut cover_temp = true;
+
+        for file in files {
+            let file_name = file.unwrap().file_name();
+            let file_name_clone = file_name.clone();
+            let file_split: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
+            let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
+            let extend_name = lc_extend_name.trim();
+            if has_extension(extend_name, &[String::from("png"), String::from("jpg"), String::from("jpeg")])
+            {
+                if cover_temp == true {
+                    comic_cover_str = format!("{}\\{}", comic_cover_str, file_name_clone.to_str().unwrap());
+                    cover_temp = false;
+                }
+                comic_count += 1;
+            }
+        }
+        if comic_count == 0 {
+            continue;
+        }
+        count += 1;
+        insert.bind((1, library_id)).unwrap();
+        insert.bind((2, title)).unwrap();
+        insert.bind((3, comic_path_str)).unwrap();
+        insert.bind((4, &*comic_cover_str)).unwrap();
+        insert.bind((5, comic_count)).unwrap();
+        insert.next().unwrap();
+    }
+
+    let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
+    update.bind((1, count)).unwrap();
+    update.bind((2, library_id)).unwrap();
+    update.next().unwrap();
+    Ok(())
+}
+
+#[warn(dead_code)]
+#[tauri::command]
+fn reload_library_old(library_id: i64) -> Result<(), String> {
     // TODO:重构方法 增加字段delete；重新加载时候，采用两个map，一个是本地文件夹，一个是数据库文件夹，两个互相比对删除，剩余的本地文件夹全部添加到数据库，数据库文件夹设置delete=1
     let conn = get_conn().unwrap();
 
@@ -342,26 +443,24 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
         pagination: Pagination { current: page as i32, size: page_size as i32, total: 0 },
     };
     if search.trim().len() == 0 {
-        select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
+        select = conn.prepare("select count(1) from comic where libraryId = ? and isDelete = 0").unwrap();
         select.bind((1, library_id)).unwrap();
-        while let State::Row = select.next().unwrap() {
-            return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
-        }
     } else {
-        select = conn.prepare("select count(1) from comic where libraryId = ? and title LIKE ?").unwrap();
+        select = conn.prepare("select count(1) from comic where libraryId = ? and title LIKE ? and isDelete = 0").unwrap();
         select.bind((1, library_id)).unwrap();
         select.bind((2, &*String::from(format!("%{}%", search.trim())))).unwrap();
-        while let State::Row = select.next().unwrap() {
-            return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
-        }
     }
+    while let State::Row = select.next().unwrap() {
+        return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
+    }
+
     if search.trim().len() == 0 {
-        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? LIMIT ? OFFSET ?").unwrap();
+        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? and isDelete = 0 LIMIT ? OFFSET ? ").unwrap();
         select.bind((1, library_id)).unwrap();
         select.bind((2, page_size)).unwrap();
         select.bind((3, offset)).unwrap();
     } else {
-        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? and title LIKE ? LIMIT ? OFFSET ?").unwrap();
+        select = conn.prepare("select Id,path,title,cover,count from comic where libraryId = ? and title LIKE ? and isDelete = 0 LIMIT ? OFFSET ? ").unwrap();
         select.bind((1, library_id)).unwrap();
         select.bind((2, &*String::from(format!("%{}%", search.trim())))).unwrap();
         select.bind((3, page_size)).unwrap();
@@ -384,7 +483,7 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
 #[tauri::command]
 fn query_comic_name(library_id: i64) -> Result<Vec<Comic>, String> {
     let conn = get_conn().unwrap();
-    let mut select = conn.prepare("select Id,title from comic where libraryId = ?").unwrap();
+    let mut select = conn.prepare("select Id,title from comic where libraryId = ? and isDelete = 0").unwrap();
     select.bind((1, library_id)).unwrap();
     let mut title_list: Vec<Comic> = Vec::new();
     while let State::Row = select.next().unwrap() {
@@ -468,7 +567,7 @@ fn delete_comic(id: i64) {
         }
     };
     // 执行删除源文件
-    if delete_source_file == true {
+    if delete_source_file {
         select = conn.prepare("select path from comic where id = ?").unwrap();
         select.bind((1, id)).unwrap();
         let mut path = String::from("");
@@ -476,7 +575,16 @@ fn delete_comic(id: i64) {
             path = select.read::<String, _>(0).unwrap();
         }
         fs::remove_dir_all(path).unwrap();
+
+        let mut delete = conn.prepare("delete from comic where id = ?").unwrap();
+        delete.bind((1, id)).unwrap();
+        delete.next().unwrap();
+    } else {
+        let mut delete = conn.prepare("update comic set isDelete = 1 where id = ?").unwrap();
+        delete.bind((1, id)).unwrap();
+        delete.next().unwrap();
     }
+
     // 获取library id
     select = conn.prepare("select libraryId from comic where id = ?").unwrap();
     select.bind((1, id)).unwrap();
@@ -484,12 +592,9 @@ fn delete_comic(id: i64) {
     while let State::Row = select.next().unwrap() {
         library_id = select.read::<i64, _>(0).unwrap();
     }
-    // 执行删除表记录
-    let mut delete = conn.prepare("delete from comic where id = ?").unwrap();
-    delete.bind((1, id)).unwrap();
-    delete.next().unwrap();
+
     // 更新library数据
-    select = conn.prepare("select count(1) from comic where libraryId = ?").unwrap();
+    select = conn.prepare("select count(1) from comic where libraryId = ? and isDelete = 0").unwrap();
     select.bind((1, library_id)).unwrap();
     let mut count = 0;
     while let State::Row = select.next().unwrap() {
