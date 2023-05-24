@@ -77,6 +77,9 @@ pub struct ComicRead {
     pub page: Vec<String>,
 }
 
+static NOW_VERSION_CODE: i32 = 6;
+static NOW_VERSION: &str = "0.1.6";
+
 // 初始化相关
 fn get_conn() -> Result<Connection, String> {
     let dir = app_local_data_dir(&Default::default()).unwrap().join("tuip123-comic\\");
@@ -132,8 +135,6 @@ fn init_db() {
     if !b {
         query = "\
         CREATE TABLE config (key TEXT PRIMARY KEY,value TEXT);\
-        insert into config (key,value) values ('version','0.1.5');\
-        insert into config (key,value) values ('version_code',5);\
         insert into config (key,value) values ('third_party_image_viewer','null');\
         insert into config (key,value) values ('third_party_open','false');\
         insert into config (key,value) values ('delete_source_file','false');\
@@ -142,11 +143,16 @@ fn init_db() {
         insert into config (key,value) values ('read_type',0);
         ";
         conn.execute(query).unwrap();
+        let mut temp = format!("insert into config (key,value) values ('version','{}');", NOW_VERSION);
+        query = &*temp;
+        conn.execute(query).unwrap();
+        temp = format!("insert into config (key,value) values ('version_code',{});", NOW_VERSION_CODE);
+        query = &*temp;
+        conn.execute(query).unwrap();
     }
 }
 
 fn update_app() {
-    let now_version_code = 5;
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select value from config where key = 'version_code'").unwrap();
     let mut update: Statement;
@@ -159,7 +165,7 @@ fn update_app() {
         let insert = "insert into config (key,value) values ('version_code',1) ";
         conn.execute(insert).unwrap();
     }
-    if version_code < now_version_code {
+    if version_code < NOW_VERSION_CODE {
         if version_code < 1 {
             let insert = "insert into config (key,value) values ('minimize_window','false') ";
             match conn.execute(insert) {
@@ -182,10 +188,11 @@ fn update_app() {
                 Err(_) => {}
             };
         }
-        let update_version = "update config set value = '0.1.5' where key = 'version' ";
+        let temp = format!("update config set value = '{}' where key = 'version' ", NOW_VERSION);
+        let update_version = &*temp;
         conn.execute(update_version).unwrap();
         update = conn.prepare("update config set value = ? where key = 'version_code' ").unwrap();
-        update.bind((1, now_version_code.to_string().as_str())).unwrap();
+        update.bind((1, NOW_VERSION_CODE.to_string().as_str())).unwrap();
         update.next().unwrap();
     }
 }
