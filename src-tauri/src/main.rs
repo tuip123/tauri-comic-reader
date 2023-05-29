@@ -77,8 +77,8 @@ pub struct ComicRead {
     pub page: Vec<String>,
 }
 
-static NOW_VERSION_CODE: i32 = 6;
-static NOW_VERSION: &str = "0.1.6";
+static NOW_VERSION_CODE: i32 = 7;
+static NOW_VERSION: &str = "0.1.7";
 
 // 初始化相关
 fn get_conn() -> Result<Connection, String> {
@@ -107,7 +107,7 @@ fn init_db() {
         b = true;
     }
     if !b {
-        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,title TEXT,cover TEXT,count INTEGER,libraryId INTEGER,isDelete INTEGER DEFAULT 0)";
+        query = "CREATE TABLE comic (Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,path TEXT,title TEXT,cover TEXT,count INTEGER,libraryId INTEGER,isDelete INTEGER DEFAULT 0,lastPage INTEGER DEFAULT 0)";
         conn.execute(query).unwrap();
     }
 
@@ -183,6 +183,13 @@ fn update_app() {
         }
         if version_code < 5 {
             let alert = "ALTER TABLE comic ADD COLUMN isDelete INTEGER DEFAULT 0";
+            match conn.execute(alert) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
+        if version_code < 7 {
+            let alert = "ALTER TABLE comic ADD COLUMN lastPage INTEGER DEFAULT 0";
             match conn.execute(alert) {
                 Ok(_) => {}
                 Err(_) => {}
@@ -661,6 +668,7 @@ fn read_comic(id: i64) -> Result<Vec<String>, String> {
         return Err(String::from("路径不存在"));
     }
     let paths = fs::read_dir(path).unwrap();
+    let mut count = 0;
     for p in paths {
         let str = String::from(p.unwrap().path().to_str().unwrap());
         let file_split: Vec<&str> = str.split(".").collect();
@@ -669,9 +677,36 @@ fn read_comic(id: i64) -> Result<Vec<String>, String> {
         if has_extension(extend_name, &[String::from("png"), String::from("jpg"), String::from("jpeg")])
         {
             comic_read.page.push(str);
+            count += 1;
         }
     }
+    let mut update = conn.prepare("update comic set count = ? where id = ?").unwrap();
+    update.bind((1, count)).unwrap();
+    update.bind((2, id)).unwrap();
+    update.next().unwrap();
     Ok(comic_read.page)
+}
+
+#[tauri::command]
+fn get_page(id: i64) -> Result<String, String> {
+    let conn = get_conn().unwrap();
+    let mut select = conn.prepare("select lastPage from comic where id = ?").unwrap();
+    select.bind((1, id)).unwrap();
+    let mut lastPage = String::from("");
+    while let State::Row = select.next().unwrap() {
+        lastPage = select.read::<String, _>(0).unwrap();
+    }
+    Ok(lastPage)
+}
+
+#[tauri::command]
+fn save_page(id: i64, page: i64) -> Result<(), String> {
+    let conn = get_conn().unwrap();
+    let mut update = conn.prepare("update comic set lastPage = ? where id = ?").unwrap();
+    update.bind((1, page)).unwrap();
+    update.bind((2, id)).unwrap();
+    update.next().unwrap();
+    Ok(())
 }
 
 #[tauri::command]
@@ -716,6 +751,8 @@ fn main() {
             delete_comic,
             delete_library,
             read_comic,
+            get_page,
+            save_page,
             minimize_window,
         ])
         .run(tauri::generate_context!())

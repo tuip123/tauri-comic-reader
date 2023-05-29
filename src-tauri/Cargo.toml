@@ -28,5 +28,5 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [dependencies.serde_with]
-version = "2.0.0"
-features = [ "json" ]
+version = "3.0.0"
+features = ["json"]

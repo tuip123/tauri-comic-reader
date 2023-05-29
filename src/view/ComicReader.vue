@@ -168,7 +168,7 @@ import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
 import {onMounted, onUnmounted, ref, watch} from "vue";
-import {useConfigStore} from "@/store/config";
+import {getConfig, useConfigStore} from "@/store/config";
 
 const config = useConfigStore()
 
@@ -217,9 +217,10 @@ watch(
         let scrollTop = rightSiderImage.value[id].offsetTop
         rightSider.value.scrollTo({top: scrollTop, behavior: 'smooth'})
       }
-
+      savePage()
     }
 )
+
 watch(
     () => readType.value,
     (type: number) => {
@@ -236,6 +237,7 @@ function back() {
   router.go(-1)
 }
 
+// 页面跳转
 function turnPage(i: number) {
   stopRightScroll.value = true
 
@@ -261,6 +263,7 @@ function turnPage(i: number) {
   }, 1)
 }
 
+// 主区域 阅读滚动
 function type0scroll(event: any) {
   let scrollTop = event.target.scrollTop
   for (let i = 0; i < comic.value.length; i++) {
@@ -272,6 +275,7 @@ function type0scroll(event: any) {
   }
 }
 
+// 主区域 上一页
 function prevPage() {
   if (handlePageId.value > 0)
     handlePageId.value -= 1
@@ -281,6 +285,7 @@ function prevPage() {
   }
 }
 
+// 主区域 下一页
 function nextPage() {
   if (handlePageId.value < comicPage.value.length - 1)
     handlePageId.value += 1
@@ -290,6 +295,27 @@ function nextPage() {
   }
 }
 
+function savePage() {
+  invoke("save_page", {id: comicId.value, page: handlePageId.value})
+}
+
+// 左区 换漫画
+async function changeComic(id: number) {
+  comicId.value = id
+  handlePageId.value = 0
+  await initData()
+}
+
+// 左区 设置尺寸
+function changeWidth(width: number | null) {
+  let w = width as number
+  comicWidth.value = w
+  invoke("update_config", {key: 'comic_width', value: w.toString()})
+  getConfig()
+
+}
+
+// 调整尺寸
 function widthLarger() {
   if (comicWidth.value < 100) {
     comicWidth.value += 10
@@ -302,25 +328,14 @@ function widthSmaller() {
   }
 }
 
-async function changeComic(id: number) {
-  comicId.value = id
-  handlePageId.value = 0
-  await initData()
-}
-
-function changeWidth(width: number | null) {
-  let w = width as number
-  comicWidth.value = w
-  invoke("update_config", {key: 'comic_width', value: w.toString()})
-}
-
-
+// 左区 阅读类型修改
 function changeReadType(type: number) {
   readType.value = type
   invoke("update_config", {key: 'read_type', value: type.toString()})
-
+  getConfig()
 }
 
+// 左区 删除漫画
 async function deleteComic(index: number) {
   let flag = false
   if (libraryComics.value[index].id === comicId.value) {
@@ -348,12 +363,13 @@ async function deleteComic(index: number) {
   }
 }
 
+// 初始化 设置
 async function initConfig() {
   comicWidth.value = Number(config.comic_width)
   readType.value = Number(config.read_type)
 }
 
-
+// 初始化 数据
 async function initData() {
   comicPage.value = []
   try {
@@ -365,12 +381,15 @@ async function initData() {
         comicPage.value.push(convertFileSrc(e))
       }
     })
+    let lastPage = <string>await invoke('get_page', {id: comicId.value})
+    handlePageId.value = Number(lastPage)
   } catch (e) {
     router.go(-1)
     message.error('文件无法打开')
   }
 }
 
+// 初始化 书柜
 async function initLibrary(libraryId: number) {
   libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId})
 }
@@ -382,15 +401,13 @@ onMounted(async () => {
   await initLibrary(Number(route.query.libraryId))
   document.addEventListener('keyup', keyup)
   document.addEventListener('mouseup', mouseup)
-  // document.addEventListener('wheel', wheel)
 })
 
 onUnmounted(() => {
   document.removeEventListener('keyup', keyup)
   document.removeEventListener('mouseup', mouseup)
-  // document.removeEventListener('wheel', wheel)
 })
-
+// 快捷手势
 const keyboardHotkey = {
   'prev': '[',
   'next': ']',
@@ -401,7 +418,6 @@ const mouseHotkey = {
   'prev': 4,
   'next': 3
 }
-
 
 function keyup(event: KeyboardEvent) {
   if (event.key === keyboardHotkey.next) {

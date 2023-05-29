@@ -72,10 +72,12 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 720,
         "resizable": true,
         "title": "tauri-comic-reader",
-        "width": 1280
+        "height": 720,
+        "width": 1280,
+        "minWidth": 600,
+        "minHeight": 720
       }
     ]
   }
