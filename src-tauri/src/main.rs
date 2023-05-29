@@ -688,15 +688,15 @@ fn read_comic(id: i64) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-fn get_page(id: i64) -> Result<String, String> {
+fn get_page(id: i64) -> Result<i64, String> {
     let conn = get_conn().unwrap();
     let mut select = conn.prepare("select lastPage from comic where id = ?").unwrap();
     select.bind((1, id)).unwrap();
-    let mut lastPage = String::from("");
+    let mut last_page: String = String::from("");
     while let State::Row = select.next().unwrap() {
-        lastPage = select.read::<String, _>(0).unwrap();
+        last_page = select.read::<String, _>(0).unwrap();
     }
-    Ok(lastPage)
+    Ok(last_page.parse().unwrap())
 }
 
 #[tauri::command]

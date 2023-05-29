@@ -381,8 +381,8 @@ async function initData() {
         comicPage.value.push(convertFileSrc(e))
       }
     })
-    let lastPage = <string>await invoke('get_page', {id: comicId.value})
-    handlePageId.value = Number(lastPage)
+    let lastPage = <number>await invoke('get_page', {id: comicId.value})
+    handlePageId.value = lastPage
   } catch (e) {
     router.go(-1)
     message.error('文件无法打开')
