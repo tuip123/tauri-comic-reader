@@ -15,6 +15,8 @@ use sqlite::{Connection, Statement};
 use sqlite::State;
 use tauri::api::path::app_local_data_dir;
 
+use trash;
+
 #[serde_as]
 #[derive(serde::Serialize)]
 #[derive(Eq, Hash, PartialEq)]
@@ -77,8 +79,8 @@ pub struct ComicRead {
     pub page: Vec<String>,
 }
 
-static NOW_VERSION_CODE: i32 = 7;
-static NOW_VERSION: &str = "0.1.7";
+static NOW_VERSION_CODE: i32 = 8;
+static NOW_VERSION: &str = "0.2.0";
 
 // 初始化相关
 fn get_conn() -> Result<Connection, String> {
@@ -339,80 +341,6 @@ fn reload_library(library_id: i64) -> Result<(), String> {
     Ok(())
 }
 
-#[warn(dead_code)]
-#[tauri::command]
-fn reload_library_old(library_id: i64) -> Result<(), String> {
-    // TODO:重构方法 增加字段delete；重新加载时候，采用两个map，一个是本地文件夹，一个是数据库文件夹，两个互相比对删除，剩余的本地文件夹全部添加到数据库，数据库文件夹设置delete=1
-    let conn = get_conn().unwrap();
-
-    let mut delete = conn.prepare("delete from comic where libraryId = ?").unwrap();
-    delete.bind((1, library_id)).unwrap();
-    delete.next().unwrap();
-
-    let mut select = conn.prepare("select root from library where Id = ?").unwrap();
-    select.bind((1, library_id)).unwrap();
-    let mut root = String::from("");
-    while let Ok(State::Row) = select.next() {
-        root = select.read::<String, _>(0).unwrap();
-    }
-    if root == "" {
-        return Err(String::from("库id不存在"));
-    }
-    let paths = fs::read_dir(root).unwrap();
-    let mut count = 0;
-    for path in paths {
-        let mut insert = conn.prepare("insert into comic (libraryId,title,path,cover,count) values (?,?,?,?,?)").unwrap();
-        let comic_path = path.unwrap().path();
-        let comic_path_clone = comic_path.clone();
-        let comic_path_clone2 = comic_path.clone();
-        let comic_path_clone3 = comic_path.clone();
-        let md = metadata(comic_path_clone3).unwrap();
-        if md.is_file() {
-            continue;
-        }
-
-        let title = comic_path.file_name().unwrap().to_str().unwrap();
-
-        let comic_path_str = comic_path_clone.to_str().unwrap();
-        let mut comic_cover_str = comic_path_str.clone().to_string();
-        let temp = fs::read_dir(comic_path_clone2);
-        let comic_dir = temp.unwrap();
-        let mut comic_count = 0;
-        let mut cover_temp = true;
-        for file in comic_dir {
-            let file_name = file.unwrap().file_name();
-            let file_name_clone = file_name.clone();
-            let file_split: Vec<&str> = file_name.to_str().unwrap().split(".").collect();
-            let lc_extend_name = file_split[file_split.len() - 1].to_string().to_lowercase();
-            let extend_name = lc_extend_name.trim();
-            if has_extension(extend_name, &[String::from("png"), String::from("jpg"), String::from("jpeg")])
-            {
-                if cover_temp == true {
-                    comic_cover_str = format!("{}\\{}", comic_cover_str, file_name_clone.to_str().unwrap());
-                    cover_temp = false;
-                }
-                comic_count += 1;
-            }
-        }
-        if comic_count == 0 {
-            continue;
-        }
-        count += 1;
-        insert.bind((1, library_id)).unwrap();
-        insert.bind((2, title)).unwrap();
-        insert.bind((3, comic_path_str)).unwrap();
-        insert.bind((4, &*comic_cover_str)).unwrap();
-        insert.bind((5, comic_count)).unwrap();
-        insert.next().unwrap();
-    }
-
-    let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
-    update.bind((1, count)).unwrap();
-    update.bind((2, library_id)).unwrap();
-    update.next().unwrap();
-    Ok(())
-}
-
 // 查询相关
 #[tauri::command]
 fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList, String> {
@@ -584,11 +512,12 @@ fn delete_comic(id: i64) {
     if delete_source_file {
         select = conn.prepare("select path from comic where id = ?").unwrap();
         select.bind((1, id)).unwrap();
+
         let mut path = String::from("");
         while let State::Row = select.next().unwrap() {
             path = select.read::<String, _>(0).unwrap();
         }
-        fs::remove_dir_all(path).unwrap();
+        trash::delete(path).unwrap();
 
         let mut delete = conn.prepare("delete from comic where id = ?").unwrap();
         delete.bind((1, id)).unwrap();
