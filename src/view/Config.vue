@@ -56,10 +56,10 @@
                   <n-switch :value="config.delete_source_file" @update:value="deleteSourceFileSetting"
                             :rail-style="railStyle">
                     <template #checked>
-                      删除源文件
+                      移入回收站
                     </template>
                     <template #unchecked>
-                      普通删除
+                      列表删除
                     </template>
                   </n-switch>
                 </div>
@@ -190,7 +190,6 @@ async function deleteSourceFileSetting() {
 }
 
 async function minimizeWindow() {
-  console.log(config['minimize_window'])
   await invoke("update_config", {key: 'minimize_window', value: config['minimize_window'] ? 'false' : 'true'})
   await getConfig()
   if (config.minimize_window) {

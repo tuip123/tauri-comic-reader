@@ -14,7 +14,6 @@ use serde_with::serde_as;
 use sqlite::{Connection, Statement};
 use sqlite::State;
 use tauri::api::path::app_local_data_dir;
-
 use trash;
 
 #[serde_as]
@@ -42,6 +41,8 @@ pub struct Pagination {
 pub struct Library {
     pub id: i64,
     pub root: String,
+    pub count: i64,
+    pub random_mode: i64,
 }
 
 #[serde_as]
@@ -79,8 +80,8 @@ pub struct ComicRead {
     pub page: Vec<String>,
 }
 
-static NOW_VERSION_CODE: i32 = 8;
-static NOW_VERSION: &str = "0.2.0";
+static NOW_VERSION_CODE: i32 = 9;
+static NOW_VERSION: &str = "0.2.1";
 
 // 初始化相关
 fn get_conn() -> Result<Connection, String> {
@@ -197,6 +198,13 @@ fn update_app() {
                 Err(_) => {}
             };
         }
+        if version_code < 9 {
+            let alert = "ALTER TABLE library ADD COLUMN randomMode INTEGER DEFAULT 0";
+            match conn.execute(alert) {
+                Ok(_) => {}
+                Err(_) => {}
+            };
+        }
         let temp = format!("update config set value = '{}' where key = 'version' ", NOW_VERSION);
         let update_version = &*temp;
         conn.execute(update_version).unwrap();
@@ -285,7 +293,6 @@ fn reload_library(library_id: i64) -> Result<(), String> {
     }
 
 
-    let mut count = 0;
     for comic_path in path_set.iter() {
         let mut insert = conn.prepare("insert into comic (libraryId,title,path,cover,count) values (?,?,?,?,?)").unwrap();
         let comic_path_clone = comic_path.clone();
@@ -325,13 +332,19 @@ fn reload_library(library_id: i64) -> Result<(), String> {
         if comic_count == 0 {
             continue;
         }
-        count += 1;
         insert.bind((1, library_id)).unwrap();
         insert.bind((2, title)).unwrap();
         insert.bind((3, comic_path_str)).unwrap();
         insert.bind((4, &*comic_cover_str)).unwrap();
         insert.bind((5, comic_count)).unwrap();
         insert.next().unwrap();
+    }
+
+    select = conn.prepare("select count(*) from comic where libraryId = ? ").unwrap();
+    select.bind((1, library_id)).unwrap();
+    let mut count = 0;
+    while let Ok(State::Row) = select.next() {
+        count = select.read::<i64, _>(0).unwrap();
     }
 
     let mut update = conn.prepare("update library set count = ? where id = ?").unwrap();
@@ -356,11 +369,11 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
         return_list.pagination.total = select.read::<i64, _>(0).unwrap() as i32;
     }
     if search.trim().len() == 0 {
-        select = conn.prepare("select Id,root,count from library LIMIT ? OFFSET ?").unwrap();
+        select = conn.prepare("select Id,root,count,randomMode from library LIMIT ? OFFSET ?").unwrap();
         select.bind((1, page_size)).unwrap();
         select.bind((2, offset)).unwrap();
     } else {
-        select = conn.prepare("select Id,root,count from library where root LIKE ? LIMIT ? OFFSET ?").unwrap();
+        select = conn.prepare("select Id,root,count,randomMode from library where root LIKE ? LIMIT ? OFFSET ?").unwrap();
         select.bind((1, &*String::from(format!("%{}%", search.trim())))).unwrap();
         select.bind((2, page_size)).unwrap();
         select.bind((3, offset)).unwrap();
@@ -369,6 +382,8 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
         let library: Library = Library {
             id: select.read::<i64, _>(0).unwrap(),
             root: select.read::<String, _>(1).unwrap(),
+            count: select.read::<i64, _>(2).unwrap(),
+            random_mode: select.read::<i64, _>(3).unwrap(),
         };
         return_list.list.push(library);
     }
@@ -425,13 +440,13 @@ fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Resu
 #[tauri::command]
 fn query_comic_name(library_id: i64) -> Result<Vec<Comic>, String> {
     let conn = get_conn().unwrap();
-    let mut select = conn.prepare("select Id,title from comic where libraryId = ? and isDelete = 0").unwrap();
+    let mut select = conn.prepare("select Id,title,path from comic where libraryId = ? and isDelete = 0").unwrap();
     select.bind((1, library_id)).unwrap();
     let mut title_list: Vec<Comic> = Vec::new();
     while let State::Row = select.next().unwrap() {
         let comic: Comic = Comic {
             id: select.read::<i64, _>(0).unwrap(),
-            path: "".to_string(),
+            path: select.read::<String, _>(2).unwrap(),
             title: select.read::<String, _>(1).unwrap(),
             cover: "".to_string(),
             count: 0,
@@ -561,6 +576,15 @@ fn delete_library(id: i64) {
     delete.next().unwrap();
 }
 
+#[tauri::command]
+fn set_library_random(id: i64, mode: i64) {
+    let conn = get_conn().unwrap();
+    let mut update = conn.prepare("update library set randomMode = ? where id = ?").unwrap();
+    update.bind((1, mode)).unwrap();
+    update.bind((2, id)).unwrap();
+    update.next().unwrap();
+}
+
 // 阅读相关
 #[tauri::command]
 fn open_with_third_party(folder: &str) -> Result<(), String> {
@@ -683,6 +707,7 @@ fn main() {
             get_page,
             save_page,
             minimize_window,
+            set_library_random,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

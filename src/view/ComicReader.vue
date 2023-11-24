@@ -6,6 +6,7 @@
       <n-layout has-sider style="height: 100vh;">
         <!--左侧侧边栏-->
         <n-layout-sider
+            ref="leftScrollbar"
             collapse-mode="width"
             :default-collapsed="false"
             :native-scrollbar="false"
@@ -15,55 +16,37 @@
             bordered
         >
           <div>
-            <!--            比例区-->
-            <div style="padding: 24px 24px 0;">
-              <n-form
-                  label-placement="left"
-                  label-width="auto"
-                  size="small"
-              >
-                <n-form-item label="画面比例：">
-                  <n-input-number button-placement="right" :max="100" :min="30" :step="10"
-                                  v-model:value="comicWidth" :on-update:value="changeWidth">
-                    <template #suffix>
-                      %
-                    </template>
-                  </n-input-number>
-                </n-form-item>
-              </n-form>
-            </div>
-            <!--            页面类型选择区-->
-            <div>
-              <n-space justify="space-around">
-                <n-radio-group v-model:value="readType" size="small" :on-update:value="changeReadType">
-                  <n-radio-button
-                      v-for="type in types"
-                      :key="type.value"
-                      :value="type.value"
-                      :label="type.label"
-                  />
-                </n-radio-group>
-              </n-space>
-            </div>
             <!--            书架-->
             <div>
               <n-config-provider v-for="(comic,index) of libraryComics" :theme="comic.id === comicId?null:darkTheme">
-                <n-card content-style="padding:4px" @click="changeComic(comic.id)">
+                <n-card content-style="padding:4px" @click="changeComic(comic.id)" :id="comic.id"
+                        @dblclick="openThirdParty(comic)">
                   <n-space justify="space-between" :wrap="false">
                     <n-ellipsis line-clamp="2" style="height: 40px">
                       {{ comic.title }}
                     </n-ellipsis>
-                    <n-button size="tiny" quaternary circle type="error" @click.stop="deleteComic(index)">
-                      <template #icon>
-                        <n-icon>
-                          <trash-sharp/>
-                        </n-icon>
-                      </template>
-                    </n-button>
+                    <div
+                        style="display: flex;flex-direction: column;justify-content: space-between;align-items: center;">
+                      <n-button size="tiny" quaternary circle type="primary" @click.stop="openSourceFolder(index)">
+                        <template #icon>
+                          <n-icon>
+                            <folder-open-outline/>
+                          </n-icon>
+                        </template>
+                      </n-button>
+                      <n-button size="tiny" quaternary circle type="error" @click.stop="deleteComic(index)">
+                        <template #icon>
+                          <n-icon>
+                            <trash-sharp/>
+                          </n-icon>
+                        </template>
+                      </n-button>
+                    </div>
                   </n-space>
                 </n-card>
               </n-config-provider>
             </div>
+
           </div>
         </n-layout-sider>
         <!--中区图片区-->
@@ -77,6 +60,53 @@
                 </n-icon>
               </template>
             </n-button>
+          </div>
+
+          <div class="bottom-hover-area">
+            <n-popover>
+              <template #trigger>
+                <n-button text class="back-button" @dblclick="toConfig">
+                  <template #icon>
+                    <n-icon size="30">
+                      <OptionsOutline/>
+                    </n-icon>
+                  </template>
+                </n-button>
+              </template>
+              <div style="width: 240px;">
+                <!--            比例区-->
+                <div style="padding-top: 4px">
+                  <n-form
+                      label-placement="left"
+                      label-width="auto"
+                      size="small"
+                  >
+                    <n-form-item label="画面比例：">
+                      <n-input-number button-placement="right" :max="100" :min="30" :step="10"
+                                      v-model:value="comicWidth" :on-update:value="changeWidth">
+                        <template #suffix>
+                          %
+                        </template>
+                      </n-input-number>
+                    </n-form-item>
+                  </n-form>
+                </div>
+                <!--            页面类型选择区-->
+                <div>
+                  <n-space justify="space-around">
+                    <n-radio-group v-model:value="readType" size="small" :on-update:value="changeReadType">
+                      <n-radio-button
+                          v-for="type in types"
+                          :key="type.value"
+                          :value="type.value"
+                          :label="type.label"
+                      />
+                    </n-radio-group>
+                  </n-space>
+                </div>
+
+              </div>
+            </n-popover>
           </div>
 
           <n-scrollbar v-if="readType === 0" ref="type0" :on-scroll="type0scroll">
@@ -158,16 +188,17 @@ import {
   NLayout,
   NLayoutContent,
   NLayoutSider,
+  NPopover,
   NRadioButton,
   NRadioGroup,
   NScrollbar,
   NSpace,
   useMessage
 } from 'naive-ui'
-import {ChevronBack, TrashSharp} from "@vicons/ionicons5";
+import {ChevronBack, FolderOpenOutline, OptionsOutline, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
-import {onMounted, onUnmounted, ref, watch} from "vue";
+import {nextTick, onMounted, onUnmounted, ref, watch} from "vue";
 import {getConfig, useConfigStore} from "@/store/config";
 
 const config = useConfigStore()
@@ -189,6 +220,7 @@ interface Comic {
 const libraryComics = ref<Comic[]>([])
 const comicPage = ref<string[]>([])
 const comicId = ref(0)
+const libraryId = ref(0)
 const comic = ref()
 const type0 = ref()
 const type1 = ref()
@@ -197,6 +229,7 @@ const type3 = ref()
 const rightSider = ref()
 const rightSiderImage = ref()
 const stopRightScroll = ref(false)
+const leftScrollbar = ref()
 
 const comicWidth = ref(40)
 const readType = ref(0)
@@ -306,12 +339,23 @@ async function changeComic(id: number) {
   await initData()
 }
 
+// 左区 第三方启动
+function openThirdParty(comic: Comic) {
+  if (config.third_party_open) {
+    message.info('正在用第三方查看器打开：' + comic.title)
+    invoke('open_with_third_party', {folder: comic.path})
+        .catch((err) => {
+          message.error('打开失败：' + err as string)
+        })
+  }
+}
+
 // 左区 设置尺寸
-function changeWidth(width: number | null) {
+async function changeWidth(width: number | null) {
   let w = width as number
   comicWidth.value = w
-  invoke("update_config", {key: 'comic_width', value: w.toString()})
-  getConfig()
+  await invoke("update_config", {key: 'comic_width', value: w.toString()})
+  await getConfig()
 
 }
 
@@ -328,11 +372,15 @@ function widthSmaller() {
   }
 }
 
-// 左区 阅读类型修改
-function changeReadType(type: number) {
+// 阅读类型修改
+async function changeReadType(type: number) {
   readType.value = type
-  invoke("update_config", {key: 'read_type', value: type.toString()})
-  getConfig()
+  await invoke("update_config", {key: 'read_type', value: type.toString()})
+  await getConfig()
+}
+
+function toConfig() {
+  router.push('/Config')
 }
 
 // 左区 删除漫画
@@ -363,6 +411,18 @@ async function deleteComic(index: number) {
   }
 }
 
+async function openSourceFolder(index: number) {
+  console.log(libraryComics.value[index])
+  message.info('正在打开：' + libraryComics.value[index].title)
+  invoke('open_source_folder', {folder: libraryComics.value[index].path})
+      .then(() => {
+        message.success('已打开')
+      })
+      .catch((err) => {
+        message.error('打开失败：' + err as string)
+      })
+}
+
 // 初始化 设置
 async function initConfig() {
   comicWidth.value = Number(config.comic_width)
@@ -390,15 +450,20 @@ async function initData() {
 }
 
 // 初始化 书柜
-async function initLibrary(libraryId: number) {
-  libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId})
+async function initLibrary() {
+  libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId: libraryId.value})
+  await nextTick()
+  let res = document.getElementById(comicId.value + '') as HTMLElement
+  let top = res.offsetTop as number
+  leftScrollbar.value.scrollTo({top: top})
 }
 
 onMounted(async () => {
   comicId.value = Number(route.query.id)
+  libraryId.value = Number(route.query.libraryId)
   await initConfig()
   await initData()
-  await initLibrary(Number(route.query.libraryId))
+  await initLibrary()
   document.addEventListener('keyup', keyup)
   document.addEventListener('mouseup', mouseup)
 })
@@ -525,6 +590,7 @@ function scrollPageDown(event: Event) {
 
 <style scoped>
 .top-hover-area {
+  opacity: 0.2;
   height: 60px;
   width: 60px;
   position: fixed;
@@ -532,6 +598,25 @@ function scrollPageDown(event: Event) {
   z-index: 100;
   display: flex;
   align-items: center;
+}
+
+.top-hover-area:hover {
+  opacity: 1;
+}
+
+.bottom-hover-area {
+  opacity: 0.2;
+  height: 60px;
+  width: 60px;
+  position: fixed;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+}
+
+.bottom-hover-area:hover {
+  opacity: 1;
 }
 
 .back-button {

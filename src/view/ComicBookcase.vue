@@ -20,7 +20,7 @@
             v-model:page-size="pagination.size"
             :item-count="pagination.total"
             :page-sizes="[6, 12, 18, 24]"
-            :page-slot="5"
+            :page-slot="9"
             show-size-picker
             :on-update:page="pageChange"
             :on-update:page-size="sizeChange"

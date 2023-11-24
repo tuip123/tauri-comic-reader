@@ -1,5 +1,5 @@
 <template>
-  <n-layout vertical size="large">
+  <n-layout vertical size="large" @click="settingActive = false">
     <n-layout-header style="height: 64px;padding: 12px">
       <Header @query="setSearchWord" noBack/>
     </n-layout-header>
@@ -29,35 +29,55 @@
               </div>
             </n-space>
           </template>
-          <n-list-item v-for="library in libraryList" :key="library.id" @click="toBookcase(library.id)">
-            {{ library.root }}
+          <n-list-item v-for="library in libraryList" :key="library.id"
+                       @dblclick.stop="toBookcase(library.id,library.root)">
+            <div style="display: flex;justify-content: space-between;">
+              <div>
+                {{ library.root }}
+              </div>
+              <div>
+                {{ library.count + '本' }}
+              </div>
+            </div>
             <template #prefix>
-              <div style="display: flex">
+              <div style="display: flex;align-items: center;">
                 <n-icon>
                   <library-outline/>
                 </n-icon>
               </div>
             </template>
             <template #suffix>
-              <div style="display: flex" >
+              <div style="display: flex" :id="'library_item_'+library.id">
                 <n-space justify="center" style="padding-right: 8px; ">
-                  <n-button tertiary round type="primary" size="small" @click.stop="reloadLibrary(library.id,library.root)">
+                  <n-button secondary round type="primary" size="small"
+                            @click.stop="openSetting(library)">
                     <template #icon>
                       <n-icon>
-                        <reload-sharp/>
+                        <settings-outline/>
                       </n-icon>
                     </template>
-                    刷新
+                    设置
                   </n-button>
                 </n-space>
-                <n-space justify="center">
-                  <n-button tertiary round type="error" size="small" @click.stop="removeLibrary(library.id,library.root)">
-                    移除
+                <n-space justify="center" style="padding-right: 8px; ">
+                  <n-button round type="info" size="small" @click.stop="listItemRead(library)">
                     <template #icon>
                       <n-icon>
-                        <remove-sharp/>
+                        <eye-outline/>
                       </n-icon>
                     </template>
+                    阅读
+                  </n-button>
+                </n-space>
+                <n-space justify="center" style="padding-right: 8px; ">
+                  <n-button tertiary round type="primary" size="small"
+                            @click.stop="toBookcase(library.id,library.root)">
+                    <template #icon>
+                      <n-icon>
+                        <folder-open-outline/>
+                      </n-icon>
+                    </template>
+                    列表
                   </n-button>
                 </n-space>
               </div>
@@ -82,31 +102,82 @@
       </n-space>
     </n-layout-footer>
   </n-layout>
+
+  <n-drawer
+      v-model:show="settingActive"
+      :width="250"
+      :trap-focus="false"
+      :block-scroll="false"
+      :to="drawerId"
+  >
+    <div
+        style="display: flex;justify-content: space-between;align-items: center;width: 100%;height: 100%"
+        @click.stop="settingActive = false"
+    >
+      {{ settingActive }}
+      <n-space justify="center" style="padding-left: 8px">
+        <n-switch @click.stop :value="settingLibrary.random_mode === 1" @update:value="changeRandomMode">
+          <template #checked>
+            随机阅读
+          </template>
+          <template #unchecked>
+            顺序阅读
+          </template>
+        </n-switch>
+      </n-space>
+
+      <n-space justify="center" style="padding-top: 4px;padding-right: 8px">
+        <n-button tertiary round type="error" size="tiny"
+                  @click.stop="removeLibraryInSetting">
+          移除
+          <template #icon>
+            <n-icon>
+              <remove-sharp/>
+            </n-icon>
+          </template>
+        </n-button>
+      </n-space>
+    </div>
+  </n-drawer>
+
 </template>
 <script setup lang="ts">
 import Header from "@/components/Header.vue";
 import {invoke} from "@tauri-apps/api/tauri";
-import {ref, onMounted} from "vue";
+import {nextTick, onMounted, reactive, ref} from "vue";
 import {
-  NPagination,
+  NButton,
+  NDrawer,
+  NIcon,
   NLayout,
-  NLayoutHeader,
-  NLayoutFooter,
   NLayoutContent,
-  NSpace,
+  NLayoutFooter,
+  NLayoutHeader,
   NList,
   NListItem,
-  NIcon,
-  NButton,
+  NPagination,
   NScrollbar,
+  NSpace,
+  NSwitch,
   useMessage
 } from "naive-ui"
-import {Library, LibraryOutline, Add, RemoveSharp, ReloadSharp} from "@vicons/ionicons5";
+import {
+  Add,
+  EyeOutline,
+  FolderOpenOutline,
+  Library,
+  LibraryOutline,
+  RemoveSharp,
+  SettingsOutline
+} from "@vicons/ionicons5";
 import {useRouter} from "vue-router";
 import {open} from "@tauri-apps/api/dialog";
+import {useConfigStore} from "@/store/config";
 
 const router = useRouter()
 const message = useMessage()
+const config = useConfigStore()
+
 
 interface Pagination {
   current: number,
@@ -114,15 +185,32 @@ interface Pagination {
   total: number,
 }
 
+interface Comic {
+  id: number,
+  count: number,
+  library_id: number,
+  cover: string,
+  path: string,
+  title: string,
+}
+
+interface ComicList {
+  list: Comic[],
+  pagination: Pagination
+}
+
 interface Library {
   id: number,
   root: string,
+  count: number,
+  random_mode: number
 }
 
-interface LibraryList {
+interface LibraryPage {
   list: Library[],
   pagination: Pagination
 }
+
 const libraryList = ref<Library[]>([])
 const pagination = ref<Pagination>({
   current: 1,
@@ -141,7 +229,7 @@ async function queryLibrary() {
     search: searchWord.value,
     page: pagination.value.current,
     pageSize: pagination.value.size
-  }) as LibraryList
+  }) as LibraryPage
   pagination.value = res.pagination
   libraryList.value = res.list
 }
@@ -156,14 +244,19 @@ async function sizeChange(num: number) {
   await queryLibrary()
 }
 
-function toBookcase(libraryId: number) {
-  router.push({path: '/ComicBookcase', query: {libraryId: libraryId}})
+async function toBookcase(libraryId: number, libraryRoot: string) {
+  console.log(settingActive.value)
+  if (settingActive.value === true) {
+    return
+  }
+  await reloadLibrary(libraryId, libraryRoot)
+  await router.push({path: '/ComicBookcase', query: {libraryId: libraryId}})
 }
 
-async function removeLibrary(libraryId: number,libraryRoot:string) {
+async function removeLibrary(libraryId: number, libraryRoot: string) {
   await invoke('delete_library', {id: libraryId})
   await queryLibrary()
-  message.error('已经删除 '+libraryRoot)
+  message.error('已经删除 ' + libraryRoot)
 }
 
 async function addLibrary() {
@@ -182,15 +275,71 @@ async function addLibrary() {
   }
 }
 
-async function reloadLibrary(libraryId: number,libraryRoot:string) {
+async function reloadLibrary(libraryId: number, libraryRoot: string) {
+  message.info('重新加载 ' + libraryRoot)
   await invoke("reload_library", {libraryId: libraryId})
   await queryLibrary()
-  message.info('已重新加载 '+libraryRoot)
+  message.info('加载完成 ' + libraryRoot)
 }
 
-onMounted(() => {
-  queryLibrary()
+function read(comicId: number, libraryId: number) {
+  router.push({path: '/ComicReader', query: {id: comicId, libraryId: libraryId}})
+}
+
+async function listItemRead(item: Library) {
+  let libraryId = item.id
+  let page = 1
+  if (item.random_mode === 0) {
+    page = 1
+  }
+  if (item.random_mode === 1) {
+    page = Math.floor(Math.random() * (item.count - 0)) + 0
+  }
+  let res = await invoke('query_comic', {
+    search: "",
+    libraryId: libraryId,
+    page: page,
+    pageSize: 1
+  }) as ComicList
+  let comicId = res.list[0].id
+  read(comicId, libraryId)
+}
+
+
+const drawerId = ref("")
+const settingActive = ref(false)
+let settingLibrary = reactive(<Library>{})
+
+async function openSetting(library: Library) {
+  settingLibrary = library
+  if (settingActive.value) {
+    settingActive.value = false
+    await nextTick()
+  }
+  drawerId.value = '#library_item_' + library.id
+  settingActive.value = true
+}
+
+async function removeLibraryInSetting() {
+  let {root, id} = settingLibrary
+  await invoke('delete_library', {id: id})
+  await queryLibrary()
+  message.error('已经删除 ' + root)
+}
+
+async function changeRandomMode() {
+  let {id, random_mode} = settingLibrary
+  random_mode = (random_mode + 1) % 2
+  await invoke('set_library_random', {id: id, mode: random_mode})
+  await queryLibrary()
+  settingLibrary.random_mode = random_mode
+}
+
+onMounted(async () => {
+  await queryLibrary()
 })
+
+
 </script>
 
 <style scoped>
