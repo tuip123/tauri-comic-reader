@@ -114,7 +114,6 @@
         style="display: flex;justify-content: space-between;align-items: center;width: 100%;height: 100%"
         @click.stop="settingActive = false"
     >
-      {{ settingActive }}
       <n-space justify="center" style="padding-left: 8px">
         <n-switch @click.stop :value="settingLibrary.random_mode === 1" @update:value="changeRandomMode">
           <template #checked>
