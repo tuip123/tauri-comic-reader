@@ -340,7 +340,7 @@ fn reload_library(library_id: i64) -> Result<(), String> {
         insert.next().unwrap();
     }
 
-    select = conn.prepare("select count(*) from comic where libraryId = ? ").unwrap();
+    select = conn.prepare("select count(1) from comic where libraryId = ? and isDelete = 0 ").unwrap();
     select.bind((1, library_id)).unwrap();
     let mut count = 0;
     while let Ok(State::Row) = select.next() {
