@@ -244,7 +244,6 @@ async function sizeChange(num: number) {
 }
 
 async function toBookcase(libraryId: number, libraryRoot: string) {
-  console.log(settingActive.value)
   if (settingActive.value === true) {
     return
   }

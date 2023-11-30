@@ -462,9 +462,16 @@ async function initData() {
   }
 }
 
+async function reloadLibrary(libraryId: number, libraryRoot: string) {
+  message.info('重新加载 ' + libraryRoot)
+  await invoke("reload_library", {libraryId: libraryId})
+  message.info('加载完成 ' + libraryRoot)
+}
+
 // 初始化 书柜
 async function initLibrary() {
   library = await invoke('query_library_by_id', {id: libraryId.value})
+  await reloadLibrary(library.id, library.root)
   libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId: libraryId.value})
   await nextTick()
   let res = document.getElementById(comicId.value + '') as HTMLElement
