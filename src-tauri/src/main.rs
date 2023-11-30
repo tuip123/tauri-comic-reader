@@ -308,7 +308,7 @@ fn reload_library(library_id: i64) -> Result<(), String> {
         // let title = comic_path.file_name().unwrap().to_str().unwrap();
 
         let comic_path_str = comic_path_clone.as_str();
-        let mut comic_cover_str = comic_path_str.clone().to_string();
+        let mut comic_cover_str = comic_path_str.to_string();
 
         let files = fs::read_dir(comic_path_clone2).unwrap();
         let mut comic_count = 0;

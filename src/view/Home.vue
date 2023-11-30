@@ -286,12 +286,15 @@ function read(comicId: number, libraryId: number) {
 
 async function listItemRead(item: Library) {
   let libraryId = item.id
+  let libraryRoot = item.root
+  await reloadLibrary(libraryId, libraryRoot)
+  let library = await invoke('query_library_by_id', {id: libraryId}) as Library
   let page = 1
   if (item.random_mode === 0) {
     page = 1
   }
   if (item.random_mode === 1) {
-    page = Math.floor(Math.random() * (item.count - 0)) + 0
+    page = Math.floor(Math.random() * (library.count - 0)) + 0
   }
   let res = await invoke('query_comic', {
     search: "",
