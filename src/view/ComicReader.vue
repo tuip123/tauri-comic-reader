@@ -198,7 +198,7 @@ import {
 import {ChevronBack, FolderOpenOutline, OptionsOutline, TrashSharp} from "@vicons/ionicons5";
 import {useRoute, useRouter} from "vue-router";
 import {convertFileSrc, invoke} from "@tauri-apps/api/tauri";
-import {nextTick, onMounted, onUnmounted, ref, watch} from "vue";
+import {nextTick, onMounted, onUnmounted, reactive, ref, watch} from "vue";
 import {getConfig, useConfigStore} from "@/store/config";
 
 const config = useConfigStore()
@@ -217,10 +217,18 @@ interface Comic {
   title: string,
 }
 
+interface Library {
+  id: number,
+  root: string,
+  count: number,
+  random_mode: number
+}
+
 const libraryComics = ref<Comic[]>([])
 const comicPage = ref<string[]>([])
 const comicId = ref(0)
 const libraryId = ref(0)
+let library = reactive(<Library>{})
 const comic = ref()
 const type0 = ref()
 const type1 = ref()
@@ -405,8 +413,13 @@ async function deleteComic(index: number) {
     comicPage.value = []
     if (libraryComics.value.length > 0) {
       let targetIndex = index >= libraryComics.value.length ? index - 1 : index
+      if (library.random_mode === 1)
+        targetIndex = Math.floor(Math.random() * (libraryComics.value.length - 0)) + 0
       comicId.value = libraryComics.value[targetIndex].id
       await initData()
+      let res = document.getElementById(comicId.value + '') as HTMLElement
+      let top = res.offsetTop as number
+      leftScrollbar.value.scrollTo({top: top})
     }
   }
 }
@@ -451,6 +464,7 @@ async function initData() {
 
 // 初始化 书柜
 async function initLibrary() {
+  library = await invoke('query_library_by_id', {id: libraryId.value})
   libraryComics.value = <Comic[]>await invoke('query_comic_name', {libraryId: libraryId.value})
   await nextTick()
   let res = document.getElementById(comicId.value + '') as HTMLElement

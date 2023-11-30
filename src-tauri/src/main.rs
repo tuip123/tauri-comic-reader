@@ -391,6 +391,29 @@ fn query_library(search: &str, page: i64, page_size: i64) -> Result<LibraryList,
 }
 
 #[tauri::command]
+fn query_library_by_id(id: i64) -> Result<Library, String> {
+    let conn = get_conn().unwrap();
+    let mut select: Statement;
+    select = conn.prepare("select Id,root,count,randomMode from library where id = ?").unwrap();
+    select.bind((1, id)).unwrap();
+    let mut library: Library = Library {
+        id: 0,
+        root: "".to_string(),
+        count: 0,
+        random_mode: 0,
+    };
+    while let State::Row = select.next().unwrap() {
+        library = Library {
+            id: select.read::<i64, _>(0).unwrap(),
+            root: select.read::<String, _>(1).unwrap(),
+            count: select.read::<i64, _>(2).unwrap(),
+            random_mode: select.read::<i64, _>(3).unwrap(),
+        };
+    }
+    Ok(library)
+}
+
+#[tauri::command]
 fn query_comic(search: &str, library_id: i64, page: i64, page_size: i64) -> Result<ComicList, String> {
     let conn = get_conn().unwrap();
     let offset = (page - 1) * page_size;
@@ -699,6 +722,7 @@ fn main() {
             open_with_third_party,
             open_source_folder,
             query_library,
+            query_library_by_id,
             query_comic,
             query_comic_name,
             delete_comic,
